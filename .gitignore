@@ -1,0 +1,43 @@
+# IDEs e editores
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# Claude / AI
+.claude/
+
+# Docs
+/docs
+
+# Outputs e planilhas
+outputs/
+planilhas/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Java / Maven
+backend/target/
+backend/data/
+*.class
+*.jar
+*.war
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Env
+.env
+.env.*
+
+# Vercel
+.vercel/
+
+# Logs
+*.log
