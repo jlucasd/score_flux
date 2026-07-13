@@ -3,19 +3,25 @@ import {
   api, apiCredito, brl, Cliente, getNomeUsuario, getToken, MESES, MecanismoOpcao, Plano,
   ResumoPlano, setSessao, UFS,
 } from './api';
+import AnaliseIndicadoresPage from './AnaliseIndicadoresPage';
 import CreditoPage from './CreditoPage';
 import CaixaPage from './CaixaPage';
 import CarteiraPage from './CarteiraPage';
 import LoginPage from './LoginPage';
 import NcgPage from './NcgPage';
+import ParametrosPage from './ParametrosPage';
+import PoliticaCreditoPage from './PoliticaCreditoPage';
+import RelatoCampoPage from './RelatoCampoPage';
 import UsuariosPage from './UsuariosPage';
 import { Campo } from './ui';
 
-type Aba = 'fluxo' | 'caixa' | 'carteira' | 'ncg' | 'credito' | 'usuarios';
+type Aba =
+  | 'parametros' | 'politica' | 'relato' | 'indicadores' | 'ncg'
+  | 'credito' | 'fluxo' | 'caixa' | 'carteira' | 'usuarios';
 
 export default function App() {
   const [logado, setLogado] = useState(!!getToken());
-  const [aba, setAba] = useState<Aba>('fluxo');
+  const [aba, setAba] = useState<Aba>('parametros');
 
   useEffect(() => {
     const expirar = () => setLogado(false);
@@ -26,11 +32,15 @@ export default function App() {
   if (!logado) return <LoginPage onLogin={() => setLogado(true)} />;
 
   const abas: [Aba, string][] = [
+    ['parametros', 'Parâmetros'],
+    ['politica', 'Política Crédito'],
+    ['relato', 'Relato de Campo'],
+    ['indicadores', 'Análise Indicadores'],
+    ['ncg', 'NCG / Tesouraria'],
+    ['credito', 'Análise de Crédito'],
     ['fluxo', 'Fluxo de Pagamentos'],
     ['caixa', 'Fluxo de Caixa'],
     ['carteira', 'Carteira'],
-    ['ncg', 'NCG / Tesouraria'],
-    ['credito', 'Análise de Crédito'],
     ['usuarios', 'Usuários'],
   ];
 
@@ -60,11 +70,15 @@ export default function App() {
         </div>
       </aside>
       <main className="conteudo">
+        {aba === 'parametros' && <ParametrosPage />}
+        {aba === 'politica' && <PoliticaCreditoPage />}
+        {aba === 'relato' && <RelatoCampoPage />}
+        {aba === 'indicadores' && <AnaliseIndicadoresPage />}
+        {aba === 'ncg' && <NcgPage />}
+        {aba === 'credito' && <CreditoPage />}
         {aba === 'fluxo' && <FluxoPage />}
         {aba === 'caixa' && <CaixaPage />}
         {aba === 'carteira' && <CarteiraPage />}
-        {aba === 'ncg' && <NcgPage />}
-        {aba === 'credito' && <CreditoPage />}
         {aba === 'usuarios' && <UsuariosPage />}
       </main>
     </div>

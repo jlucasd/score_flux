@@ -192,7 +192,17 @@ export interface SubcriterioPolitica {
   nome: string;
   peso: number;
   automatico: boolean;
+  instrumento: string | null;
+  fonte: string | null;
+  validacao: string | null;
+  descricao: string | null;
   opcoes: OpcaoPolitica[];
+}
+
+export interface Faixa {
+  scoreMinimo: number;
+  rating: string;
+  percentualLimite: number;
 }
 
 export interface Politica {
@@ -240,6 +250,30 @@ export interface AnaliseDetalhe {
   sugestoes: Record<string, number>;
 }
 
+export interface RelatoCampo {
+  clienteId: number;
+  clienteNome: string;
+  clienteCpfCnpj: string | null;
+  conceitoComercial: string | null;
+  conceitoComercialJustificativa: string | null;
+  tempoMercado: string | null;
+  tempoMercadoJustificativa: string | null;
+  bandeira: string | null;
+  bandeiraJustificativa: string | null;
+  possuiErp: boolean | null;
+  possuiCobranca: boolean | null;
+  unidadesNegocio: string | null;
+  unidadesNegocioJustificativa: string | null;
+  riscoClimatico: string | null;
+  riscoClimaticoJustificativa: string | null;
+  observacoes: string | null;
+  atualizadoEm: string | null;
+}
+
+export type RelatoCampoDados = Omit<
+  RelatoCampo, 'clienteId' | 'clienteNome' | 'clienteCpfCnpj' | 'atualizadoEm'
+>;
+
 export const apiCredito = {
   listarClientes: () => http<Cliente[]>('/api/clientes'),
   criarCliente: (dados: {
@@ -255,6 +289,13 @@ export const apiCredito = {
     }),
   indicadores: (clienteId: number) => http<Indicadores>(`/api/clientes/${clienteId}/indicadores`),
   politica: () => http<Politica>('/api/politica'),
+  faixas: () => http<Faixa[]>('/api/politica/faixas'),
+  relatoCampo: (clienteId: number) => http<RelatoCampo>(`/api/clientes/${clienteId}/relato-campo`),
+  salvarRelatoCampo: (clienteId: number, dados: RelatoCampoDados) =>
+    http<RelatoCampo>(`/api/clientes/${clienteId}/relato-campo`, {
+      method: 'PUT',
+      body: JSON.stringify(dados),
+    }),
   analises: (clienteId: number) => http<AnaliseResumo[]>(`/api/clientes/${clienteId}/analises`),
   criarAnalise: (clienteId: number) =>
     http<AnaliseDetalhe>(`/api/clientes/${clienteId}/analises`, { method: 'POST' }),

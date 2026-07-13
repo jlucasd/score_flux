@@ -26,7 +26,7 @@ spring:
     activate:
       on-profile: postgres
   datasource:
-    url: jdbc:postgresql://localhost:5432/scoreflux
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scoreflux}
     driver-class-name: org.postgresql.Driver
-    username: scoreflux
-    password: scoreflux
+    username: ${SPRING_DATASOURCE_USERNAME:scoreflux}
+    password: ${SPRING_DATASOURCE_PASSWORD:scoreflux}

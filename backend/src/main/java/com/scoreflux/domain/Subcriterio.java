@@ -34,6 +34,19 @@ public class Subcriterio {
     @Column(nullable = false)
     private int ordem;
 
+    // Metadados da aba "Parâmetros" (instrumento de coleta, fonte, quem valida, descrição)
+    @Column(length = 60)
+    private String instrumento;
+
+    @Column(length = 60)
+    private String fonte;
+
+    @Column(length = 60)
+    private String validacao;
+
+    @Column(length = 200)
+    private String descricao;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public PoliticaCredito getPolitica() { return politica; }
@@ -50,4 +63,12 @@ public class Subcriterio {
     public void setAutomatico(boolean automatico) { this.automatico = automatico; }
     public int getOrdem() { return ordem; }
     public void setOrdem(int ordem) { this.ordem = ordem; }
+    public String getInstrumento() { return instrumento; }
+    public void setInstrumento(String instrumento) { this.instrumento = instrumento; }
+    public String getFonte() { return fonte; }
+    public void setFonte(String fonte) { this.fonte = fonte; }
+    public String getValidacao() { return validacao; }
+    public void setValidacao(String validacao) { this.validacao = validacao; }
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
 }

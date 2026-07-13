@@ -20,6 +20,18 @@ replicando a lógica de cálculo em código.
 | Carteira: limite × saldo em aberto → OK/BLOQUEAR | ✅ implementado | Abas "TESTE2" (controle de clientes) |
 | Parecer de crédito em PDF | ✅ implementado | — |
 | Tela NCG/Tesouraria (balanço reclassificado + importação de PDF) | ✅ implementado | Aba "NCG" |
+| Tela Parâmetros (dados estáticos da política) | ✅ implementado | Aba "Parâmetros" |
+| Tela Política Crédito (simulador com peso atribuído → peso cliente ao vivo) | ✅ implementado | Aba "Política Crédito" |
+| Tela Relato de Campo (formulário persistente por cliente) | ✅ implementado | Aba "Relato de Campo" |
+| Tela Análise Indicadores (aba fiel, máscara R$, manual + PDF) | ✅ implementado | Aba "Análise Indicadores" |
+
+### Agentes e skills do projeto (automação de desenvolvimento)
+
+- `CLAUDE.md` — convenções carregadas em toda sessão do Claude Code.
+- `.claude/agents/scoreflux-backend.md` e `.claude/agents/scoreflux-frontend.md` — agentes
+  especialistas para delegar alterações de backend/frontend.
+- `.claude/skills/nova-tela-scoreflux/` — checklist de módulo completo (migration → API → página → verificação).
+- `.claude/skills/verificar-scoreflux/` — como subir/reiniciar/diagnosticar o sistema localmente.
 
 ### Importação de balanço por PDF (tela NCG)
 

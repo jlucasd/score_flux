@@ -5,6 +5,7 @@ import com.scoreflux.api.dto.PoliticaDTO;
 import com.scoreflux.domain.AnaliseCredito;
 import com.scoreflux.service.CreditoService;
 import com.scoreflux.service.ParecerPdfService;
+import com.scoreflux.service.ScoreCalculator;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -40,9 +41,20 @@ public class AnaliseController {
                                          List<AnaliseDetalheDTO.RespostaDTO> respostas) {
     }
 
+    public record FaixaResponse(BigDecimal scoreMinimo, String rating, BigDecimal percentualLimite) {
+        static FaixaResponse de(ScoreCalculator.Faixa f) {
+            return new FaixaResponse(f.scoreMinimo(), f.rating(), f.percentualLimite());
+        }
+    }
+
     @GetMapping("/politica")
     public PoliticaDTO politica() {
         return service.politicaVigente();
+    }
+
+    @GetMapping("/politica/faixas")
+    public List<FaixaResponse> faixas() {
+        return ScoreCalculator.FAIXAS.stream().map(FaixaResponse::de).toList();
     }
 
     @GetMapping("/clientes/{clienteId}/analises")

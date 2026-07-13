@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: scoreflux-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: postgres
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: scoreflux-db
+          property: connectionURI
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase:
+          name: scoreflux-db
+          property: user
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase:
+          name: scoreflux-db
+          property: password
+      - key: SCOREFLUX_JWT_SECRET
+        generateValue: true
+    healthCheckPath: /api/auth/login
+
+databases:
+  - name: scoreflux-db
+    plan: free
+    databaseName: scoreflux
+    user: scoreflux

@@ -27,6 +27,7 @@ public class CreditoService {
     private final OpcaoRespostaRepository opcaoRepository;
     private final AnaliseCreditoRepository analiseRepository;
     private final RespostaAnaliseRepository respostaRepository;
+    private final RelatoCampoRepository relatoCampoRepository;
     private final IndicadoresCalculator indicadoresCalculator;
     private final ScoreCalculator scoreCalculator;
 
@@ -38,6 +39,7 @@ public class CreditoService {
                           OpcaoRespostaRepository opcaoRepository,
                           AnaliseCreditoRepository analiseRepository,
                           RespostaAnaliseRepository respostaRepository,
+                          RelatoCampoRepository relatoCampoRepository,
                           IndicadoresCalculator indicadoresCalculator,
                           ScoreCalculator scoreCalculator) {
         this.empresaRepository = empresaRepository;
@@ -48,6 +50,7 @@ public class CreditoService {
         this.opcaoRepository = opcaoRepository;
         this.analiseRepository = analiseRepository;
         this.respostaRepository = respostaRepository;
+        this.relatoCampoRepository = relatoCampoRepository;
         this.indicadoresCalculator = indicadoresCalculator;
         this.scoreCalculator = scoreCalculator;
     }
@@ -143,11 +146,45 @@ public class CreditoService {
 
         List<PoliticaDTO.SubcriterioDTO> subs = subcriterios.stream()
                 .map(s -> new PoliticaDTO.SubcriterioDTO(s.getId(), s.getGrupo(), s.getCodigo(), s.getNome(),
-                        s.getPeso(), s.isAutomatico(), opcoesPorSub.getOrDefault(s.getId(), List.of())))
+                        s.getPeso(), s.isAutomatico(), s.getInstrumento(), s.getFonte(), s.getValidacao(),
+                        s.getDescricao(), opcoesPorSub.getOrDefault(s.getId(), List.of())))
                 .toList();
 
         return new PoliticaDTO(politica.getId(), politica.getVersao(), politica.getNome(),
                 politica.getInflacaoReferencia(), subs);
+    }
+
+    // ---- Relato de campo (um por cliente, upsert) ----
+
+    @Transactional(readOnly = true)
+    public RelatoCampo relatoCampo(Long clienteId) {
+        Cliente cliente = buscarCliente(clienteId);
+        RelatoCampo relato = relatoCampoRepository.findByClienteId(clienteId)
+                .orElseGet(RelatoCampo::new); // em branco, não persistido — só existe quando salvar
+        relato.setCliente(cliente); // entidade carregada (open-in-view desligado)
+        return relato;
+    }
+
+    public RelatoCampo salvarRelatoCampo(Long clienteId, RelatoCampo dados) {
+        Cliente cliente = buscarCliente(clienteId);
+        RelatoCampo relato = relatoCampoRepository.findByClienteId(clienteId)
+                .orElseGet(RelatoCampo::new);
+        relato.setCliente(cliente);
+        relato.setConceitoComercial(dados.getConceitoComercial());
+        relato.setConceitoComercialJustificativa(dados.getConceitoComercialJustificativa());
+        relato.setTempoMercado(dados.getTempoMercado());
+        relato.setTempoMercadoJustificativa(dados.getTempoMercadoJustificativa());
+        relato.setBandeira(dados.getBandeira());
+        relato.setBandeiraJustificativa(dados.getBandeiraJustificativa());
+        relato.setPossuiErp(dados.getPossuiErp());
+        relato.setPossuiCobranca(dados.getPossuiCobranca());
+        relato.setUnidadesNegocio(dados.getUnidadesNegocio());
+        relato.setUnidadesNegocioJustificativa(dados.getUnidadesNegocioJustificativa());
+        relato.setRiscoClimatico(dados.getRiscoClimatico());
+        relato.setRiscoClimaticoJustificativa(dados.getRiscoClimaticoJustificativa());
+        relato.setObservacoes(dados.getObservacoes());
+        relato.setAtualizadoEm(LocalDateTime.now());
+        return relatoCampoRepository.save(relato);
     }
 
     // ---- Análises ----

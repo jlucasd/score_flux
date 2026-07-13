@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num } from './api';
-import { Campo } from './ui';
+import { Campo, InputMoeda } from './ui';
 
 interface Linha {
   chave: keyof Demonstrativo;
@@ -79,21 +79,6 @@ function calcular(d: Demonstrativo) {
   else tipo = ['Tipo VI', 'Crítica', 'Desequilíbrio grave e risco de insolvência'];
 
   return { ac, pc, tesouraria, ncg, cdg, liquidezCorrente, diferencaBalanco, tipo };
-}
-
-/** Máscara de moeda: digite apenas dígitos, os 2 últimos são centavos (padrão bancário). */
-function InputMoeda(props: { valor: number; onChange: (v: number) => void }) {
-  return (
-    <input
-      inputMode="numeric"
-      placeholder="R$ 0,00"
-      value={props.valor === 0 ? '' : brl(props.valor)}
-      onChange={(e) => {
-        const digitos = e.target.value.replace(/\D/g, '');
-        props.onChange(digitos ? Number(digitos) / 100 : 0);
-      }}
-    />
-  );
 }
 
 export default function NcgPage() {

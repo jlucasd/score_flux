@@ -763,3 +763,84 @@ header {
   vertical-align: middle;
   margin-right: 5px;
 }
+
+/* ---- Parâmetros, Política Crédito, Relato de Campo e Análise Indicadores ---- */
+
+/* Colunas de texto corrido (instrumento/fonte/validação) */
+.col-texto {
+  text-align: left;
+  white-space: normal;
+}
+
+/* Célula derivada do balanço — somente leitura */
+.celula-derivada {
+  background: #f7faf7;
+  cursor: help;
+  color: #3c4b3c;
+}
+
+/* Linha de indicador calculado ao vivo (destaque como as fórmulas da planilha) */
+.linha-indicador td {
+  background: #eef4ee;
+  font-weight: 600;
+}
+
+.linha-indicador .col-item {
+  color: #1c6b33;
+}
+
+/* Faixa de rating atual do score simulado */
+.linha-faixa-atual td {
+  background: #e3f2e6;
+  font-weight: 600;
+}
+
+/* Peso Cliente calculado — destaque verde */
+.peso-cliente {
+  color: #1c6b33;
+  font-weight: 700;
+  margin-left: 8px;
+  font-size: 0.85rem;
+}
+
+/* Descrição do subcritério (texto menor, cinza) */
+.descricao-criterio {
+  font-size: 0.8rem;
+  color: #5a6b5a;
+  margin: 2px 0 8px;
+}
+
+/* Tabela de opções do simulador de política */
+.tabela-opcoes {
+  max-width: 560px;
+  margin-bottom: 6px;
+}
+
+.tabela-opcoes .celula-valor input {
+  width: 88px;
+}
+
+/* Pares de radios lado a lado (ERP / Cobrança) */
+.par-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+/* Valor exibido como texto no lugar de um input */
+.texto-campo {
+  font-weight: 600;
+  padding: 7px 0;
+}
+
+/* Lista da documentação a ser solicitada */
+.lista-documentacao {
+  margin: 0;
+  padding-left: 22px;
+  font-size: 0.88rem;
+  color: #3c4b3c;
+}
+
+.lista-documentacao li {
+  margin-bottom: 6px;
+}

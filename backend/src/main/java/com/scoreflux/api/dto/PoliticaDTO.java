@@ -18,6 +18,10 @@ public record PoliticaDTO(
             String nome,
             BigDecimal peso,
             boolean automatico,
+            String instrumento,
+            String fonte,
+            String validacao,
+            String descricao,
             List<OpcaoDTO> opcoes
     ) {
     }
