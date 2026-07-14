@@ -1,3 +1,7 @@
+// URL base da API. Em produção (Vercel) aponte para o backend via VITE_API_BASE_URL
+// (ex.: https://scoreflux-api.onrender.com). Em dev fica vazio e usa o proxy do Vite.
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+
 // ---- Autenticação ----
 
 let token: string | null = localStorage.getItem('sf_token');
@@ -64,7 +68,7 @@ export interface ResumoPlano {
 async function http<T>(url: string, options?: RequestInit): Promise<T> {
   const cabecalhos: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) cabecalhos['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(url, { headers: cabecalhos, ...options });
+  const res = await fetch(API_BASE + url, { headers: cabecalhos, ...options });
   if (res.status === 401 && !url.startsWith('/api/auth')) {
     setSessao(null);
     window.dispatchEvent(new Event('sf-sessao-expirada'));
@@ -387,7 +391,7 @@ export interface ExtracaoPdf {
 export async function extrairBalancoPdf(arquivo: File): Promise<ExtracaoPdf> {
   const form = new FormData();
   form.append('arquivo', arquivo);
-  const res = await fetch('/api/demonstrativos/extrair-pdf', {
+  const res = await fetch(API_BASE + '/api/demonstrativos/extrair-pdf', {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
@@ -406,7 +410,7 @@ export async function extrairBalancoPdf(arquivo: File): Promise<ExtracaoPdf> {
 
 /** Baixa o parecer PDF autenticado e abre em nova aba (link direto não envia o token). */
 export async function baixarParecer(analiseId: number) {
-  const res = await fetch(`/api/analises/${analiseId}/parecer`, {
+  const res = await fetch(`${API_BASE}/api/analises/${analiseId}/parecer`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) throw new Error('Não foi possível gerar o parecer');

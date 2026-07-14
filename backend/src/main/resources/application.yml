@@ -18,7 +18,8 @@ spring:
       max-request-size: 10MB
 
 server:
-  port: 8080
+  # Provedores de deploy (Render etc.) injetam a porta via variável PORT.
+  port: ${PORT:8080}
 
 ---
 spring:
@@ -26,7 +27,9 @@ spring:
     activate:
       on-profile: postgres
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scoreflux}
+    # Aceita uma URL JDBC completa em SPRING_DATASOURCE_URL (ex.: Neon/Supabase) OU
+    # monta a partir de host/porta/nome (ex.: propriedades do banco no Blueprint do Render).
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:scoreflux}}
     driver-class-name: org.postgresql.Driver
-    username: ${SPRING_DATASOURCE_USERNAME:scoreflux}
-    password: ${SPRING_DATASOURCE_PASSWORD:scoreflux}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:scoreflux}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:scoreflux}}

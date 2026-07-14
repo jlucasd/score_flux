@@ -4,28 +4,44 @@ services:
     runtime: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
+    region: oregon
     plan: free
+    healthCheckPath: /api/health
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: postgres
-      - key: SPRING_DATASOURCE_URL
+      # Conexão com o banco montada por partes (mais robusto que a URI crua do Render,
+      # que vem como postgresql://… sem o prefixo jdbc: exigido pelo driver).
+      - key: DB_HOST
         fromDatabase:
           name: scoreflux-db
-          property: connectionURI
-      - key: SPRING_DATASOURCE_USERNAME
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: scoreflux-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: scoreflux-db
+          property: database
+      - key: DB_USER
         fromDatabase:
           name: scoreflux-db
           property: user
-      - key: SPRING_DATASOURCE_PASSWORD
+      - key: DB_PASSWORD
         fromDatabase:
           name: scoreflux-db
           property: password
       - key: SCOREFLUX_JWT_SECRET
         generateValue: true
-    healthCheckPath: /api/auth/login
+      # Origens liberadas para o frontend (Vercel). "*" é seguro aqui pois a
+      # autenticação é por Bearer token, não por cookie. Restrinja se quiser.
+      - key: SCOREFLUX_CORS_ORIGINS
+        value: "*"
 
 databases:
   - name: scoreflux-db
     plan: free
     databaseName: scoreflux
     user: scoreflux
+    region: oregon

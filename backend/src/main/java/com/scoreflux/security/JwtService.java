@@ -2,12 +2,14 @@ package com.scoreflux.security;
 
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Date;
 
@@ -18,7 +20,17 @@ public class JwtService {
     private final Duration validade = Duration.ofHours(12);
 
     public JwtService(@Value("${scoreflux.jwt.secret:scoreflux-dev-secret-trocar-em-producao-0123456789}") String segredo) {
-        this.chave = Keys.hmacShaKeyFor(segredo.getBytes(StandardCharsets.UTF_8));
+        // Deriva uma chave de 512 bits via SHA-512, para qualquer segredo funcionar com HS384/512
+        // (evita WeakKeyException se o segredo injetado em produção for curto).
+        this.chave = new SecretKeySpec(sha512(segredo), "HmacSHA384");
+    }
+
+    private static byte[] sha512(String segredo) {
+        try {
+            return MessageDigest.getInstance("SHA-512").digest(segredo.getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-512 indisponível", e);
+        }
     }
 
     public String gerarToken(String email) {
