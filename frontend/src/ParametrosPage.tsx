@@ -1,9 +1,9 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Politica, apiCredito } from './api';
 
-/** Peso decimal com vírgula: 0,10 / 0,025 (2–3 casas conforme necessário). */
+/** Peso em porcentagem: 0,10 → 10% · 0,025 → 2,5% · 1,00 → 100%. */
 const fmtPeso = (v: number) =>
-  v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+  (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
 
 export default function ParametrosPage() {
   const [politica, setPolitica] = useState<Politica | null>(null);

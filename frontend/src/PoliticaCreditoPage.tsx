@@ -5,8 +5,9 @@ import {
 } from './api';
 import { Campo } from './ui';
 
+/** Peso em porcentagem: 0,10 → 10% · 0,025 → 2,5% · 1,00 → 100%. */
 const fmtPeso = (v: number) =>
-  v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+  (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
 
 export default function PoliticaCreditoPage() {
   const [politica, setPolitica] = useState<Politica | null>(null);
@@ -92,14 +93,14 @@ export default function PoliticaCreditoPage() {
                       <tr>
                         <th className="col-item">Opções Disponíveis</th>
                         <th>Peso</th>
-                        <th>Peso Atribuído</th>
+                        <th>Peso Atribuído (%)</th>
                       </tr>
                     </thead>
                     <tbody>
                       {sub.opcoes.map((op) => (
                         <tr key={op.id}>
                           <td className="col-item">{op.rotulo}</td>
-                          <td>{op.nota}</td>
+                          <td>{op.nota}%</td>
                           <td className="celula-valor">
                             <input
                               type="number"

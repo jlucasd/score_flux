@@ -25,7 +25,10 @@ export default function LoginPage(props: { onLogin: () => void }) {
     <div className="tela-login">
       <div className="cartao-login">
         <h1>ScoreFlux</h1>
-        <p className="subtitulo">Análise de crédito e fluxo de caixa para o agro</p>
+        <p className="login-saudacao">Bem-vindo(a)!</p>
+        <p className="subtitulo">
+          Acesse sua conta para acompanhar a análise de crédito e o fluxo de caixa.
+        </p>
         {erro && <div className="erro">{erro}</div>}
         <label>
           E-mail
@@ -51,6 +54,7 @@ export default function LoginPage(props: { onLogin: () => void }) {
         <button disabled={!email.trim() || !senha || carregando} onClick={entrar}>
           {carregando ? 'Entrando…' : 'Entrar'}
         </button>
+        <p className="login-tagline">Crédito seguro, decisões inteligentes.</p>
       </div>
     </div>
   );

@@ -612,10 +612,26 @@ textarea {
   text-align: center;
 }
 
+.login-saudacao {
+  text-align: center;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1c6b33;
+}
+
 .cartao-login .subtitulo {
   text-align: center;
   margin: 0 0 8px;
   font-size: 0.85rem;
+}
+
+.login-tagline {
+  text-align: center;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: #5a6b5a;
 }
 
 .cartao-login label {
