@@ -22,7 +22,13 @@ export default function PoliticaCreditoPage() {
   useEffect(() => {
     apiCredito.politica().then(setPolitica).catch((e) => setErro(e.message));
     apiCredito.faixas().then(setFaixas).catch((e) => setErro(e.message));
-    apiCredito.listarClientes().then(setClientes).catch((e) => setErro(e.message));
+    apiCredito
+      .listarClientes()
+      .then((lista) => {
+        setClientes(lista);
+        setClienteId((atual) => atual ?? (lista.length > 0 ? lista[0].id : null));
+      })
+      .catch((e) => setErro(e.message));
   }, []);
 
   useEffect(() => {
@@ -59,12 +65,33 @@ export default function PoliticaCreditoPage() {
   const media = pl !== null && faturamento !== null ? (pl + faturamento) / 2 : null;
   const limite = media !== null && faixaAtual ? media * faixaAtual.percentualLimite : null;
 
+  const cliente = clientes.find((c) => c.id === clienteId) ?? null;
+
   return (
     <>
       {erro && <div className="erro">{erro}</div>}
 
       <section className="painel">
+        <div className="linha-form">
+          <Campo label="Empresa / Cliente">
+            <select
+              value={clienteId ?? ''}
+              onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : null)}
+            >
+              {clientes.length === 0 && <option value="">— nenhum cliente —</option>}
+              {clientes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome} {c.uf ? `(${c.uf})` : ''}
+                </option>
+              ))}
+            </select>
+          </Campo>
+        </div>
+      </section>
+
+      <section className="painel">
         <h2>Avaliação de Risco de Crédito de Cooperativas e Revendas</h2>
+        {cliente && <p className="subtitulo">{cliente.nome}{cliente.uf ? ` — ${cliente.uf}` : ''}</p>}
         <p className="dica">
           Simulador fiel à aba da planilha — os valores digitados aqui não são gravados; a análise
           oficial (com histórico e parecer) fica no menu Análise de Crédito.
@@ -167,21 +194,6 @@ export default function PoliticaCreditoPage() {
 
       <section className="painel">
         <h2>Rating do Cliente / Limite de Crédito</h2>
-        <div className="linha-form">
-          <Campo label="Cliente">
-            <select
-              value={clienteId ?? ''}
-              onChange={(e) => setClienteId(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">— selecione —</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome} {c.uf ? `(${c.uf})` : ''}
-                </option>
-              ))}
-            </select>
-          </Campo>
-        </div>
         <div className="cartoes">
           <div className="cartao" title="Patrimônio Líquido do último exercício">
             <div className="cartao-titulo">Patrimônio Líquido</div>
