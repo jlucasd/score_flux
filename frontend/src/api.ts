@@ -284,6 +284,10 @@ export const apiCredito = {
     nome: string; cpfCnpj?: string; tipo: string; municipio?: string; uf?: string;
     telefone?: string; email?: string; endereco?: string;
   }) => http<Cliente>('/api/clientes', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizarCliente: (id: number, dados: {
+    nome: string; cpfCnpj?: string; tipo: string; municipio?: string; uf?: string;
+    telefone?: string; email?: string; endereco?: string;
+  }) => http<Cliente>(`/api/clientes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
   excluirCliente: (id: number) => http<void>(`/api/clientes/${id}`, { method: 'DELETE' }),
   demonstrativos: (clienteId: number) => http<Demonstrativo[]>(`/api/clientes/${clienteId}/demonstrativos`),
   salvarDemonstrativo: (clienteId: number, exercicio: number, dados: Partial<Demonstrativo>) =>

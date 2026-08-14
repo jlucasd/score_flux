@@ -83,7 +83,7 @@ export default function CarteiraPage() {
                 {carteira.posicoes.length === 0 && (
                   <tr>
                     <td colSpan={7} className="vazio">
-                      Nenhum cliente cadastrado — cadastre em "Análise de Crédito"
+                      Nenhum cliente cadastrado — cadastre em "Cadastro do Cliente"
                     </td>
                   </tr>
                 )}

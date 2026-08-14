@@ -860,3 +860,34 @@ header {
 .lista-documentacao li {
   margin-bottom: 6px;
 }
+
+/* ---- CRUD de cliente: excluir com confirmação ---- */
+
+.botao-perigo {
+  background: #a1352a;
+  border-color: #a1352a;
+  color: #fff;
+}
+
+.botao-perigo:not(:disabled):hover {
+  background: #86271e;
+}
+
+.confirmacao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  background: #fdecea;
+  border: 1px solid #f5c6c0;
+  color: #a1352a;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 12px 0;
+}
+
+.confirmacao-acoes {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}

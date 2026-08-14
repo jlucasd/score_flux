@@ -58,9 +58,14 @@ export default function CreditoPage() {
         clientes={clientes}
         clienteId={clienteId}
         onSelecionar={setClienteId}
-        onCriado={async (novo) => {
+        onSalvo={async (c) => {
           await carregarClientes();
-          setClienteId(novo.id);
+          setClienteId(c.id);
+        }}
+        onExcluido={async () => {
+          const lista = await apiCredito.listarClientes();
+          setClientes(lista);
+          setClienteId(lista.length > 0 ? lista[0].id : null);
         }}
         onErro={setErro}
       />
@@ -71,23 +76,83 @@ export default function CreditoPage() {
   );
 }
 
+const FORM_CLIENTE_VAZIO = {
+  nome: '', cpfCnpj: '', tipo: 'PRODUTOR', municipio: '', uf: '',
+  telefone: '', email: '', endereco: '',
+};
+
 function ClientesPainel(props: {
   clientes: Cliente[];
   clienteId: number | null;
   onSelecionar: (id: number) => void;
-  onCriado: (c: Cliente) => void;
+  onSalvo: (c: Cliente) => void;
+  onExcluido: () => void;
   onErro: (m: string) => void;
 }) {
-  const formVazio = {
-    nome: '', cpfCnpj: '', tipo: 'PRODUTOR', municipio: '', uf: '',
-    telefone: '', email: '', endereco: '',
+  const [modo, setModo] = useState<'novo' | 'editando'>('novo');
+  const [form, setForm] = useState(FORM_CLIENTE_VAZIO);
+  const [confirmando, setConfirmando] = useState(false);
+
+  const clienteSel = props.clientes.find((c) => c.id === props.clienteId) ?? null;
+
+  const iniciarNovo = () => {
+    setModo('novo');
+    setForm(FORM_CLIENTE_VAZIO);
+    setConfirmando(false);
   };
-  const [novo, setNovo] = useState(formVazio);
+
+  const iniciarEdicao = () => {
+    if (!clienteSel) return;
+    setConfirmando(false);
+    setModo('editando');
+    setForm({
+      nome: clienteSel.nome, cpfCnpj: clienteSel.cpfCnpj ?? '', tipo: clienteSel.tipo,
+      municipio: clienteSel.municipio ?? '', uf: clienteSel.uf ?? '',
+      telefone: clienteSel.telefone ?? '', email: clienteSel.email ?? '', endereco: clienteSel.endereco ?? '',
+    });
+  };
+
+  const dados = () => ({
+    nome: form.nome.trim(),
+    cpfCnpj: form.cpfCnpj || undefined,
+    tipo: form.tipo,
+    municipio: form.municipio || undefined,
+    uf: form.uf || undefined,
+    telefone: form.telefone || undefined,
+    email: form.email || undefined,
+    endereco: form.endereco || undefined,
+  });
+
+  const salvar = () => {
+    const req = modo === 'editando' && clienteSel
+      ? apiCredito.atualizarCliente(clienteSel.id, dados())
+      : apiCredito.criarCliente(dados());
+    req
+      .then((c) => {
+        setForm(FORM_CLIENTE_VAZIO);
+        setModo('novo');
+        props.onSalvo(c);
+      })
+      .catch((e) => props.onErro(e.message));
+  };
+
+  const excluir = () => {
+    if (!clienteSel) return;
+    apiCredito
+      .excluirCliente(clienteSel.id)
+      .then(() => {
+        iniciarNovo();
+        props.onExcluido();
+      })
+      .catch((e) => props.onErro(e.message));
+  };
+
+  const editando = modo === 'editando';
 
   return (
     <section className="painel">
       <div className="linha-form">
-        <Campo label="Cliente analisado">
+        <Campo label="Cliente cadastrado">
           <select value={props.clienteId ?? ''} onChange={(e) => props.onSelecionar(Number(e.target.value))}>
             {props.clientes.length === 0 && <option value="">— nenhum cliente —</option>}
             {props.clientes.map((c) => (
@@ -97,19 +162,37 @@ function ClientesPainel(props: {
             ))}
           </select>
         </Campo>
+        <div className="acoes">
+          <button className="botao-secundario" onClick={iniciarNovo}>Novo Cadastro</button>
+          <button className="botao-secundario" disabled={!clienteSel} onClick={iniciarEdicao}>Alterar</button>
+          <button className="botao-perigo" disabled={!clienteSel} onClick={() => setConfirmando(true)}>Excluir</button>
+        </div>
       </div>
-      <h3 className="titulo-form">Cadastrar novo cliente</h3>
+
+      {confirmando && clienteSel && (
+        <div className="confirmacao">
+          <span>Tem certeza que gostaria de excluir <strong>{clienteSel.nome}</strong>?</span>
+          <span className="confirmacao-acoes">
+            <button className="botao-perigo" onClick={excluir}>Sim, excluir</button>
+            <button className="botao-secundario" onClick={() => setConfirmando(false)}>Cancelar</button>
+          </span>
+        </div>
+      )}
+
+      <h3 className="titulo-form">
+        {editando ? `Alterar cadastro — ${clienteSel?.nome ?? ''}` : 'Novo cadastro de cliente'}
+      </h3>
       <div className="linha-form">
         <Campo label="Nome / Razão Social *" largo>
-          <input placeholder="Nome completo ou razão social" value={novo.nome}
-                 onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
+          <input placeholder="Nome completo ou razão social" value={form.nome}
+                 onChange={(e) => setForm({ ...form, nome: e.target.value })} />
         </Campo>
         <Campo label="CPF/CNPJ">
-          <input placeholder="00.000.000/0000-00" className="campo-medio" value={novo.cpfCnpj}
-                 onChange={(e) => setNovo({ ...novo, cpfCnpj: e.target.value })} />
+          <input placeholder="00.000.000/0000-00" className="campo-medio" value={form.cpfCnpj}
+                 onChange={(e) => setForm({ ...form, cpfCnpj: e.target.value })} />
         </Campo>
         <Campo label="Tipo">
-          <select value={novo.tipo} onChange={(e) => setNovo({ ...novo, tipo: e.target.value })}>
+          <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
             <option value="PRODUTOR">Produtor</option>
             <option value="REVENDA">Revenda</option>
             <option value="COOPERATIVA">Cooperativa</option>
@@ -117,50 +200,33 @@ function ClientesPainel(props: {
           </select>
         </Campo>
         <Campo label="Telefone">
-          <input placeholder="(00) 00000-0000" className="campo-medio" value={novo.telefone}
-                 onChange={(e) => setNovo({ ...novo, telefone: e.target.value })} />
+          <input placeholder="(00) 00000-0000" className="campo-medio" value={form.telefone}
+                 onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
         </Campo>
         <Campo label="E-mail">
-          <input type="email" placeholder="cliente@email.com" className="campo-medio" value={novo.email}
-                 onChange={(e) => setNovo({ ...novo, email: e.target.value })} />
+          <input type="email" placeholder="cliente@email.com" className="campo-medio" value={form.email}
+                 onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </Campo>
       </div>
       <div className="linha-form">
         <Campo label="Endereço" largo>
-          <input placeholder="Rua, número, bairro" className="campo-endereco" value={novo.endereco}
-                 onChange={(e) => setNovo({ ...novo, endereco: e.target.value })} />
+          <input placeholder="Rua, número, bairro" className="campo-endereco" value={form.endereco}
+                 onChange={(e) => setForm({ ...form, endereco: e.target.value })} />
         </Campo>
         <Campo label="Município">
-          <input placeholder="Município" className="campo-medio" value={novo.municipio}
-                 onChange={(e) => setNovo({ ...novo, municipio: e.target.value })} />
+          <input placeholder="Município" className="campo-medio" value={form.municipio}
+                 onChange={(e) => setForm({ ...form, municipio: e.target.value })} />
         </Campo>
         <Campo label="UF">
-          <input placeholder="SC" className="campo-uf" maxLength={2} value={novo.uf}
-                 onChange={(e) => setNovo({ ...novo, uf: e.target.value.toUpperCase() })} />
+          <input placeholder="SC" className="campo-uf" maxLength={2} value={form.uf}
+                 onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })} />
         </Campo>
-        <button
-          disabled={!novo.nome.trim()}
-          onClick={() =>
-            apiCredito
-              .criarCliente({
-                nome: novo.nome.trim(),
-                cpfCnpj: novo.cpfCnpj || undefined,
-                tipo: novo.tipo,
-                municipio: novo.municipio || undefined,
-                uf: novo.uf || undefined,
-                telefone: novo.telefone || undefined,
-                email: novo.email || undefined,
-                endereco: novo.endereco || undefined,
-              })
-              .then((c) => {
-                setNovo(formVazio);
-                props.onCriado(c);
-              })
-              .catch((e) => props.onErro(e.message))
-          }
-        >
-          Cadastrar cliente
+        <button disabled={!form.nome.trim()} onClick={salvar}>
+          {editando ? 'Salvar alterações' : 'Cadastrar cliente'}
         </button>
+        {editando && (
+          <button className="botao-secundario" onClick={iniciarNovo}>Cancelar</button>
+        )}
       </div>
     </section>
   );

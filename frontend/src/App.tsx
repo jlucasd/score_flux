@@ -21,7 +21,7 @@ type Aba =
 
 export default function App() {
   const [logado, setLogado] = useState(!!getToken());
-  const [aba, setAba] = useState<Aba>('parametros');
+  const [aba, setAba] = useState<Aba>('credito');
 
   useEffect(() => {
     const expirar = () => setLogado(false);
@@ -32,12 +32,12 @@ export default function App() {
   if (!logado) return <LoginPage onLogin={() => setLogado(true)} />;
 
   const abas: [Aba, string][] = [
-    ['parametros', 'Parâmetros'],
-    ['politica', 'Política Crédito'],
+    ['credito', 'Cadastro do Cliente'],
     ['relato', 'Relato de Campo'],
-    ['indicadores', 'Análise Indicadores'],
-    ['ncg', 'NCG / Tesouraria'],
-    ['credito', 'Análise de Crédito'],
+    ['politica', 'Política de Crédito'],
+    ['indicadores', 'Análise de Indicadores'],
+    ['ncg', 'Balanço'],
+    ['parametros', 'Parâmetros'],
     ['fluxo', 'Fluxo de Pagamentos'],
     ['caixa', 'Fluxo de Caixa'],
     ['carteira', 'Carteira'],

@@ -94,7 +94,7 @@ export default function PoliticaCreditoPage() {
         {cliente && <p className="subtitulo">{cliente.nome}{cliente.uf ? ` — ${cliente.uf}` : ''}</p>}
         <p className="dica">
           Simulador fiel à aba da planilha — os valores digitados aqui não são gravados; a análise
-          oficial (com histórico e parecer) fica no menu Análise de Crédito.
+          oficial (com histórico e parecer) fica no menu Cadastro do Cliente.
         </p>
       </section>
 
