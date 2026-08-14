@@ -10,38 +10,14 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: postgres
-      # Conexão com o banco montada por partes (mais robusto que a URI crua do Render,
-      # que vem como postgresql://… sem o prefixo jdbc: exigido pelo driver).
-      - key: DB_HOST
-        fromDatabase:
-          name: scoreflux-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: scoreflux-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: scoreflux-db
-          property: database
-      - key: DB_USER
-        fromDatabase:
-          name: scoreflux-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: scoreflux-db
-          property: password
+      # Banco externo (Neon). Setar manualmente no painel do Render.
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
       - key: SCOREFLUX_JWT_SECRET
         generateValue: true
-      # Origens liberadas para o frontend (Vercel). "*" é seguro aqui pois a
-      # autenticação é por Bearer token, não por cookie. Restrinja se quiser.
       - key: SCOREFLUX_CORS_ORIGINS
         value: "*"
-
-databases:
-  - name: scoreflux-db
-    plan: free
-    databaseName: scoreflux
-    user: scoreflux
-    region: oregon
