@@ -14,6 +14,7 @@ import PoliticaCreditoPage from './PoliticaCreditoPage';
 import RelatoCampoPage from './RelatoCampoPage';
 import UsuariosPage from './UsuariosPage';
 import { Campo } from './ui';
+import { AnaliseProvider } from './contexto';
 
 type Aba =
   | 'parametros' | 'politica' | 'relato' | 'indicadores' | 'ncg'
@@ -45,6 +46,7 @@ export default function App() {
   ];
 
   return (
+    <AnaliseProvider>
     <div className="layout">
       <aside className="sidebar">
         <h1>ScoreFlux</h1>
@@ -82,6 +84,7 @@ export default function App() {
         {aba === 'usuarios' && <UsuariosPage />}
       </main>
     </div>
+    </AnaliseProvider>
   );
 }
 

@@ -133,6 +133,23 @@ export interface Cliente {
   telefone: string | null;
   email: string | null;
   endereco: string | null;
+  numero: string | null;
+  bairro: string | null;
+  cep: string | null;
+}
+
+export interface DadosCliente {
+  nome: string;
+  cpfCnpj?: string;
+  tipo: string;
+  municipio?: string;
+  uf?: string;
+  telefone?: string;
+  email?: string;
+  endereco?: string;
+  numero?: string;
+  bairro?: string;
+  cep?: string;
 }
 
 export interface Demonstrativo {
@@ -280,14 +297,10 @@ export type RelatoCampoDados = Omit<
 
 export const apiCredito = {
   listarClientes: () => http<Cliente[]>('/api/clientes'),
-  criarCliente: (dados: {
-    nome: string; cpfCnpj?: string; tipo: string; municipio?: string; uf?: string;
-    telefone?: string; email?: string; endereco?: string;
-  }) => http<Cliente>('/api/clientes', { method: 'POST', body: JSON.stringify(dados) }),
-  atualizarCliente: (id: number, dados: {
-    nome: string; cpfCnpj?: string; tipo: string; municipio?: string; uf?: string;
-    telefone?: string; email?: string; endereco?: string;
-  }) => http<Cliente>(`/api/clientes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+  criarCliente: (dados: DadosCliente) =>
+    http<Cliente>('/api/clientes', { method: 'POST', body: JSON.stringify(dados) }),
+  atualizarCliente: (id: number, dados: DadosCliente) =>
+    http<Cliente>(`/api/clientes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
   excluirCliente: (id: number) => http<void>(`/api/clientes/${id}`, { method: 'DELETE' }),
   demonstrativos: (clienteId: number) => http<Demonstrativo[]>(`/api/clientes/${clienteId}/demonstrativos`),
   salvarDemonstrativo: (clienteId: number, exercicio: number, dados: Partial<Demonstrativo>) =>

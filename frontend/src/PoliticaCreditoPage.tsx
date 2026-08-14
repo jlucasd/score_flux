@@ -4,16 +4,17 @@ import {
   apiCredito, brl, num, pct,
 } from './api';
 import { Campo } from './ui';
+import { useAnalise } from './contexto';
 
 /** Peso em porcentagem: 0,10 → 10% · 0,025 → 2,5% · 1,00 → 100%. */
 const fmtPeso = (v: number) =>
   (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
 
 export default function PoliticaCreditoPage() {
+  const { clienteId, setClienteId } = useAnalise();
   const [politica, setPolitica] = useState<Politica | null>(null);
   const [faixas, setFaixas] = useState<Faixa[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteId, setClienteId] = useState<number | null>(null);
   const [ultimoDemo, setUltimoDemo] = useState<Demonstrativo | null>(null);
   // Peso atribuído (0–100) digitado por opção, exatamente como na planilha — nada é persistido.
   const [atribuidos, setAtribuidos] = useState<Record<number, number>>({});
@@ -26,9 +27,10 @@ export default function PoliticaCreditoPage() {
       .listarClientes()
       .then((lista) => {
         setClientes(lista);
-        setClienteId((atual) => atual ?? (lista.length > 0 ? lista[0].id : null));
+        if (clienteId === null && lista.length > 0) setClienteId(lista[0].id);
       })
       .catch((e) => setErro(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

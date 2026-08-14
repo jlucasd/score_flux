@@ -4,6 +4,7 @@ import {
   apiCredito, baixarParecer, brl, num, pct,
 } from './api';
 import { Campo } from './ui';
+import { useAnalise } from './contexto';
 
 const CAMPOS_DEMONSTRATIVO: { chave: keyof Demonstrativo; rotulo: string; grupo: string }[] = [
   { chave: 'receitaBruta', rotulo: 'Receita Bruta', grupo: 'DRE' },
@@ -33,21 +34,24 @@ const demonstrativoVazio = (exercicio: number): Demonstrativo => ({
 });
 
 export default function CreditoPage() {
+  const { clienteId, setClienteId } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteId, setClienteId] = useState<number | null>(null);
   const [politica, setPolitica] = useState<Politica | null>(null);
   const [erro, setErro] = useState<string | null>(null);
 
   const carregarClientes = useCallback(async () => {
-    const lista = await apiCredito.listarClientes();
-    setClientes(lista);
-    setClienteId((atual) => atual ?? (lista.length > 0 ? lista[0].id : null));
+    setClientes(await apiCredito.listarClientes());
   }, []);
 
   useEffect(() => {
     carregarClientes().catch((e) => setErro(e.message));
     apiCredito.politica().then(setPolitica).catch((e) => setErro(e.message));
   }, [carregarClientes]);
+
+  // Seleciona o primeiro cliente se nenhum estiver escolhido (compartilhado entre abas).
+  useEffect(() => {
+    if (clienteId === null && clientes.length > 0) setClienteId(clientes[0].id);
+  }, [clientes, clienteId, setClienteId]);
 
   const cliente = clientes.find((c) => c.id === clienteId) ?? null;
 
@@ -78,7 +82,7 @@ export default function CreditoPage() {
 
 const FORM_CLIENTE_VAZIO = {
   nome: '', cpfCnpj: '', tipo: 'PRODUTOR', municipio: '', uf: '',
-  telefone: '', email: '', endereco: '',
+  telefone: '', email: '', endereco: '', numero: '', bairro: '', cep: '',
 };
 
 function ClientesPainel(props: {
@@ -109,6 +113,7 @@ function ClientesPainel(props: {
       nome: clienteSel.nome, cpfCnpj: clienteSel.cpfCnpj ?? '', tipo: clienteSel.tipo,
       municipio: clienteSel.municipio ?? '', uf: clienteSel.uf ?? '',
       telefone: clienteSel.telefone ?? '', email: clienteSel.email ?? '', endereco: clienteSel.endereco ?? '',
+      numero: clienteSel.numero ?? '', bairro: clienteSel.bairro ?? '', cep: clienteSel.cep ?? '',
     });
   };
 
@@ -121,6 +126,9 @@ function ClientesPainel(props: {
     telefone: form.telefone || undefined,
     email: form.email || undefined,
     endereco: form.endereco || undefined,
+    numero: form.numero || undefined,
+    bairro: form.bairro || undefined,
+    cep: form.cep || undefined,
   });
 
   const salvar = () => {
@@ -210,8 +218,20 @@ function ClientesPainel(props: {
       </div>
       <div className="linha-form">
         <Campo label="Endereço" largo>
-          <input placeholder="Rua, número, bairro" className="campo-endereco" value={form.endereco}
+          <input placeholder="Logradouro (rua, avenida...)" className="campo-endereco" value={form.endereco}
                  onChange={(e) => setForm({ ...form, endereco: e.target.value })} />
+        </Campo>
+        <Campo label="Número">
+          <input placeholder="Nº / S/N" className="campo-uf" value={form.numero}
+                 onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+        </Campo>
+        <Campo label="Bairro">
+          <input placeholder="Bairro" className="campo-medio" value={form.bairro}
+                 onChange={(e) => setForm({ ...form, bairro: e.target.value })} />
+        </Campo>
+        <Campo label="CEP">
+          <input placeholder="00.000-000" className="campo-medio" value={form.cep}
+                 onChange={(e) => setForm({ ...form, cep: e.target.value })} />
         </Campo>
         <Campo label="Município">
           <input placeholder="Município" className="campo-medio" value={form.municipio}

@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num, pct } from './api';
 import { Campo, InputMoeda } from './ui';
+import { useAnalise, useAutosave } from './contexto';
 
-const TITULO_DERIVADO = 'Derivado do balanço — edite as contas na tela NCG / Tesouraria';
+const TITULO_DERIVADO = 'Derivado do balanço — edite as contas na tela Balanço';
+
+const CAMPOS_MONETARIOS: (keyof Demonstrativo)[] = [
+  'receitaBruta', 'lucroLiquido', 'caixaBancos', 'aplicacoes', 'contasReceber', 'estoques',
+  'outrosAtivosCirculantes', 'realizavelLongoPrazo', 'imobilizado', 'emprestimosCurtoPrazo',
+  'fornecedores', 'salariosAPagar', 'outrasObrigacoesCirculantes', 'passivoNaoCirculante', 'patrimonioLiquido',
+];
+const temConteudo = (d: Demonstrativo) => d.id != null || CAMPOS_MONETARIOS.some((k) => Number(d[k]) !== 0);
 
 const vazio = (exercicio: number): Demonstrativo => ({
   exercicio,
@@ -38,9 +46,10 @@ const mediaCalculaveis = (valores: (number | null)[]) => {
 };
 
 export default function AnaliseIndicadoresPage() {
+  const { clienteId, setClienteId, ano, setAno } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteId, setClienteId] = useState<number | null>(null);
   const [colunas, setColunas] = useState<Demonstrativo[]>([]);
+  const [sujo, setSujo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -49,40 +58,55 @@ export default function AnaliseIndicadoresPage() {
       .listarClientes()
       .then((lista) => {
         setClientes(lista);
-        setClienteId((atual) => atual ?? (lista.length > 0 ? lista[0].id : null));
+        if (clienteId === null && lista.length > 0) setClienteId(lista[0].id);
       })
       .catch((e) => setErro(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const carregar = useCallback(() => {
-    if (clienteId === null) return;
-    const anoAtual = new Date().getFullYear();
+    if (clienteId === null) {
+      setColunas([]);
+      return;
+    }
     apiCredito
       .demonstrativos(clienteId)
       .then((lista) => {
-        const ordenados = [...lista].sort((a, b) => a.exercicio - b.exercicio).slice(-2).map((d) => ({ ...d }));
-        if (ordenados.length === 0) setColunas([vazio(anoAtual - 1), vazio(anoAtual)]);
-        else if (ordenados.length === 1) setColunas([vazio(ordenados[0].exercicio - 1), ordenados[0]]);
-        else setColunas(ordenados);
+        const porAno = new Map(lista.map((d) => [d.exercicio, d]));
+        setColunas([ano - 1, ano].map((y) => {
+          const existente = porAno.get(y);
+          return existente ? { ...existente } : vazio(y);
+        }));
+        setSujo(false);
       })
       .catch((e) => setErro(e.message));
-  }, [clienteId]);
+  }, [clienteId, ano]);
 
   useEffect(carregar, [carregar]);
 
   const atualizar = (indice: number, chave: keyof Demonstrativo, valor: number) => {
     setColunas((atual) => atual.map((c, i) => (i === indice ? { ...c, [chave]: valor } : c)));
+    setSujo(true);
+  };
+
+  const salvarColuna = (d: Demonstrativo) => {
+    if (clienteId === null || !temConteudo(d)) return Promise.resolve();
+    return apiCredito.salvarDemonstrativo(clienteId, d.exercicio, d);
   };
 
   const salvar = (indice: number) => {
-    if (clienteId === null) return;
-    const d = colunas[indice];
     setErro(null);
-    apiCredito
-      .salvarDemonstrativo(clienteId, d.exercicio, d)
-      .then(() => setAviso(`Exercício ${d.exercicio} salvo`))
+    salvarColuna(colunas[indice])
+      .then(() => { setSujo(false); setAviso(`Exercício ${colunas[indice].exercicio} salvo`); })
       .catch((e) => setErro(e.message));
   };
+
+  useAutosave(colunas, (cols) => {
+    if (!sujo || clienteId === null) return;
+    Promise.all(cols.map(salvarColuna))
+      .then(() => { setSujo(false); setAviso('Salvo automaticamente'); })
+      .catch((e) => setErro(e.message));
+  });
 
   const importar = (indice: number, arquivo: File) => {
     setErro(null);
@@ -90,18 +114,10 @@ export default function AnaliseIndicadoresPage() {
     extrairBalancoPdf(arquivo)
       .then((r) => {
         setColunas((atual) =>
-          atual.map((c, i) => {
-            if (i !== indice) return c;
-            const novo = { ...c, ...r.campos } as Demonstrativo;
-            if (r.exercicioDetectado) novo.exercicio = r.exercicioDetectado;
-            return novo;
-          }),
+          atual.map((c, i) => (i === indice ? { ...c, ...(r.campos as Partial<Demonstrativo>) } : c)),
         );
-        setAviso(
-          `PDF lido: ${r.camposEncontrados.length} campo(s) preenchido(s)` +
-            (r.exercicioDetectado ? ` · exercício detectado: ${r.exercicioDetectado}` : '') +
-            '. Confira os valores antes de salvar.',
-        );
+        setSujo(true);
+        setAviso(`PDF lido: ${r.camposEncontrados.length} campo(s) preenchido(s). Confira antes de salvar.`);
       })
       .catch((e) => setErro(e.message));
   };
@@ -129,9 +145,18 @@ export default function AnaliseIndicadoresPage() {
               ))}
             </select>
           </Campo>
+          <Campo label="Ano de referência">
+            <input
+              type="number"
+              className="campo-ano"
+              value={ano}
+              onChange={(e) => setAno(Number(e.target.value) || ano)}
+            />
+          </Campo>
         </div>
         <p className="dica">
-          Mesma base de dados da tela NCG / Tesouraria — os totais derivados vêm das contas granulares do balanço.
+          Mesma base de dados da tela Balanço — os totais derivados vêm das contas granulares do balanço.
+          Os valores são <strong>salvos automaticamente</strong>.
         </p>
       </section>
 
@@ -144,14 +169,7 @@ export default function AnaliseIndicadoresPage() {
                 <tr>
                   <th className="col-item">Conta / Indicador</th>
                   {colunas.map((c, i) => (
-                    <th key={i}>
-                      <input
-                        type="number"
-                        className="campo-exercicio"
-                        value={c.exercicio}
-                        onChange={(e) => atualizar(i, 'exercicio', Number(e.target.value) || 0)}
-                      />
-                    </th>
+                    <th key={i}>{c.exercicio}</th>
                   ))}
                   <th>Média</th>
                 </tr>

@@ -41,6 +41,15 @@ public class Cliente {
     @Column(length = 300)
     private String endereco;
 
+    @Column(length = 15)
+    private String cep;
+
+    @Column(length = 120)
+    private String bairro;
+
+    @Column(length = 20)
+    private String numero;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public Empresa getEmpresa() { return empresa; }
@@ -61,4 +70,10 @@ public class Cliente {
     public void setEmail(String email) { this.email = email; }
     public String getEndereco() { return endereco; }
     public void setEndereco(String endereco) { this.endereco = endereco; }
+    public String getCep() { return cep; }
+    public void setCep(String cep) { this.cep = cep; }
+    public String getBairro() { return bairro; }
+    public void setBairro(String bairro) { this.bairro = bairro; }
+    public String getNumero() { return numero; }
+    public void setNumero(String numero) { this.numero = numero; }
 }

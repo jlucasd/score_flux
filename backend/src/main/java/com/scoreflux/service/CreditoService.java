@@ -78,6 +78,9 @@ public class CreditoService {
         cliente.setTelefone(dados.getTelefone());
         cliente.setEmail(dados.getEmail());
         cliente.setEndereco(dados.getEndereco());
+        cliente.setCep(dados.getCep());
+        cliente.setBairro(dados.getBairro());
+        cliente.setNumero(dados.getNumero());
         return clienteRepository.save(cliente);
     }
 

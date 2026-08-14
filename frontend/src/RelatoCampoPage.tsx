@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Cliente, RelatoCampo, RelatoCampoDados, apiCredito } from './api';
 import { Campo } from './ui';
+import { useAnalise } from './contexto';
 
 const DOCUMENTACAO = [
   'Carta de referência bancária (ao menos de um Banco que seja cliente)',
@@ -28,8 +29,8 @@ const extrairDados = (r: RelatoCampo): RelatoCampoDados => ({
 });
 
 export default function RelatoCampoPage() {
+  const { clienteId, setClienteId } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteId, setClienteId] = useState<number | null>(null);
   const [relato, setRelato] = useState<RelatoCampo | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -39,9 +40,10 @@ export default function RelatoCampoPage() {
       .listarClientes()
       .then((lista) => {
         setClientes(lista);
-        setClienteId((atual) => atual ?? (lista.length > 0 ? lista[0].id : null));
+        if (clienteId === null && lista.length > 0) setClienteId(lista[0].id);
       })
       .catch((e) => setErro(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

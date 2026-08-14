@@ -39,7 +39,8 @@ class ParametrosApiIntegrationTest {
         assertThat(sub11).isNotNull();
         assertThat(sub11.get("instrumento").asText()).isEqualTo("Relato de Campo");
         assertThat(sub11.get("validacao").asText()).isEqualTo("Comercial");
-        assertThat(sub11.get("fonte").asText()).isEqualTo("RTVs");
+        // V6 alterou a Fonte "RTVs" para "Comercial"
+        assertThat(sub11.get("fonte").asText()).isEqualTo("Comercial");
         assertThat(sub11.get("descricao").asText())
                 .isEqualTo("Relato comercial baseado em informações colhidas no campo");
     }

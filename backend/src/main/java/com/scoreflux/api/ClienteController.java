@@ -24,7 +24,8 @@ public class ClienteController {
 
     public record ClienteRequest(@NotBlank String nome, String cpfCnpj, Cliente.Tipo tipo,
                                  String municipio, String uf, String telefone,
-                                 @jakarta.validation.constraints.Email String email, String endereco) {
+                                 @jakarta.validation.constraints.Email String email, String endereco,
+                                 String cep, String bairro, String numero) {
 
         Cliente paraEntidade() {
             Cliente c = new Cliente();
@@ -36,16 +37,21 @@ public class ClienteController {
             c.setTelefone(telefone);
             c.setEmail(email);
             c.setEndereco(endereco);
+            c.setCep(cep);
+            c.setBairro(bairro);
+            c.setNumero(numero);
             return c;
         }
     }
 
     public record ClienteResponse(Long id, String nome, String cpfCnpj, String tipo,
                                   String municipio, String uf, String telefone,
-                                  String email, String endereco) {
+                                  String email, String endereco,
+                                  String cep, String bairro, String numero) {
         static ClienteResponse de(Cliente c) {
             return new ClienteResponse(c.getId(), c.getNome(), c.getCpfCnpj(), c.getTipo().name(),
-                    c.getMunicipio(), c.getUf(), c.getTelefone(), c.getEmail(), c.getEndereco());
+                    c.getMunicipio(), c.getUf(), c.getTelefone(), c.getEmail(), c.getEndereco(),
+                    c.getCep(), c.getBairro(), c.getNumero());
         }
     }
 

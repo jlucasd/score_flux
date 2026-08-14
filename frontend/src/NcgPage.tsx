@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num } from './api';
 import { Campo, InputMoeda } from './ui';
+import { useAnalise, useAutosave } from './contexto';
+
+const CAMPOS_MONETARIOS: (keyof Demonstrativo)[] = [
+  'receitaBruta', 'lucroLiquido', 'caixaBancos', 'aplicacoes', 'contasReceber', 'estoques',
+  'outrosAtivosCirculantes', 'realizavelLongoPrazo', 'imobilizado', 'emprestimosCurtoPrazo',
+  'fornecedores', 'salariosAPagar', 'outrasObrigacoesCirculantes', 'passivoNaoCirculante', 'patrimonioLiquido',
+];
+// Só vale a pena salvar uma coluna que já existe ou que tem algum valor digitado.
+const temConteudo = (d: Demonstrativo) => d.id != null || CAMPOS_MONETARIOS.some((k) => Number(d[k]) !== 0);
 
 interface Linha {
   chave: keyof Demonstrativo;
@@ -82,9 +91,10 @@ function calcular(d: Demonstrativo) {
 }
 
 export default function NcgPage() {
+  const { clienteId, setClienteId, ano, setAno } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [clienteId, setClienteId] = useState<number | null>(null);
   const [colunas, setColunas] = useState<Demonstrativo[]>([]);
+  const [sujo, setSujo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -93,39 +103,57 @@ export default function NcgPage() {
       .listarClientes()
       .then((lista) => {
         setClientes(lista);
-        setClienteId((atual) => atual ?? (lista.length > 0 ? lista[0].id : null));
+        if (clienteId === null && lista.length > 0) setClienteId(lista[0].id);
       })
       .catch((e) => setErro(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Colunas são sempre os exercícios [ano-1, ano] do ano de referência compartilhado.
   const carregar = useCallback(() => {
-    if (clienteId === null) return;
-    const anoAtual = new Date().getFullYear();
+    if (clienteId === null) {
+      setColunas([]);
+      return;
+    }
     apiCredito
       .demonstrativos(clienteId)
       .then((lista) => {
-        setColunas(lista.length > 0
-          ? lista.slice(-2).map((d) => ({ ...d }))
-          : [vazio(anoAtual - 1), vazio(anoAtual)]);
+        const porAno = new Map(lista.map((d) => [d.exercicio, d]));
+        setColunas([ano - 1, ano].map((y) => {
+          const existente = porAno.get(y);
+          return existente ? { ...existente } : vazio(y);
+        }));
+        setSujo(false);
       })
       .catch((e) => setErro(e.message));
-  }, [clienteId]);
+  }, [clienteId, ano]);
 
   useEffect(carregar, [carregar]);
 
   const atualizarCampo = (indice: number, chave: keyof Demonstrativo, valor: number) => {
     setColunas((atual) => atual.map((c, i) => (i === indice ? { ...c, [chave]: valor } : c)));
+    setSujo(true);
+  };
+
+  const salvarColuna = (d: Demonstrativo) => {
+    if (clienteId === null || !temConteudo(d)) return Promise.resolve();
+    return apiCredito.salvarDemonstrativo(clienteId, d.exercicio, d);
   };
 
   const salvar = (indice: number) => {
-    if (clienteId === null) return;
-    const d = colunas[indice];
     setErro(null);
-    apiCredito
-      .salvarDemonstrativo(clienteId, d.exercicio, d)
-      .then(() => setAviso(`Exercício ${d.exercicio} salvo`))
+    salvarColuna(colunas[indice])
+      .then(() => { setSujo(false); setAviso(`Exercício ${colunas[indice].exercicio} salvo`); })
       .catch((e) => setErro(e.message));
   };
+
+  // Autosave: persiste as colunas editadas ~800ms após a última alteração (débito zero se nada mudou).
+  useAutosave(colunas, (cols) => {
+    if (!sujo || clienteId === null) return;
+    Promise.all(cols.map(salvarColuna))
+      .then(() => { setSujo(false); setAviso('Salvo automaticamente'); })
+      .catch((e) => setErro(e.message));
+  });
 
   const importar = (indice: number, arquivo: File) => {
     setErro(null);
@@ -133,18 +161,10 @@ export default function NcgPage() {
     extrairBalancoPdf(arquivo)
       .then((r) => {
         setColunas((atual) =>
-          atual.map((c, i) => {
-            if (i !== indice) return c;
-            const novo = { ...c, ...r.campos } as Demonstrativo;
-            if (r.exercicioDetectado) novo.exercicio = r.exercicioDetectado;
-            return novo;
-          }),
+          atual.map((c, i) => (i === indice ? { ...c, ...(r.campos as Partial<Demonstrativo>) } : c)),
         );
-        setAviso(
-          `PDF lido: ${r.camposEncontrados.length} campo(s) preenchido(s)` +
-            (r.exercicioDetectado ? ` · exercício detectado: ${r.exercicioDetectado}` : '') +
-            '. Confira os valores antes de salvar.',
-        );
+        setSujo(true);
+        setAviso(`PDF lido: ${r.camposEncontrados.length} campo(s) preenchido(s). Confira antes de salvar.`);
       })
       .catch((e) => setErro(e.message));
   };
@@ -168,10 +188,19 @@ export default function NcgPage() {
               ))}
             </select>
           </Campo>
+          <Campo label="Ano de referência">
+            <input
+              type="number"
+              className="campo-ano"
+              value={ano}
+              onChange={(e) => setAno(Number(e.target.value) || ano)}
+            />
+          </Campo>
         </div>
         <p className="dica">
-          Estrutura da aba "NCG" da planilha: balanço reclassificado por exercício. Preencha à mão ou
-          importe um PDF de balanço/balancete — a leitura é uma sugestão, sempre confira antes de salvar.
+          Balanço reclassificado dos exercícios {ano - 1} e {ano} (o ano de referência é compartilhado
+          com as demais abas). Preencha à mão ou importe um PDF — a leitura é uma sugestão. Os valores
+          são <strong>salvos automaticamente</strong>.
         </p>
       </section>
 
@@ -319,14 +348,7 @@ function CartaoExercicio(props: {
   return (
     <section className="painel">
       <div className="cabecalho-secao">
-        <Campo label="Exercício">
-          <input
-            type="number"
-            className="campo-exercicio"
-            value={d.exercicio}
-            onChange={(e) => props.onAtualizar(indice, 'exercicio', Number(e.target.value) || 0)}
-          />
-        </Campo>
+        <h3 style={{ margin: 0 }}>Exercício {d.exercicio}</h3>
         <div className="acoes">
           <input
             ref={inputArquivo}
