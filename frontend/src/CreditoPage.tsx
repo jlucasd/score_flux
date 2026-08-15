@@ -3,7 +3,7 @@ import {
   AnaliseDetalhe, AnaliseResumo, Cliente, Demonstrativo, Indicadores, Politica,
   apiCredito, baixarParecer, brl, num, pct, UFS,
 } from './api';
-import { Campo } from './ui';
+import { Campo, InputMoeda } from './ui';
 import { useAnalise } from './contexto';
 
 const CAMPOS_DEMONSTRATIVO: { chave: keyof Demonstrativo; rotulo: string; grupo: string }[] = [
@@ -352,10 +352,9 @@ function DemonstrativosPainel(props: { cliente: Cliente; onSalvo: () => void; on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.cliente.id]);
 
-  const atualizar = (indice: number, chave: keyof Demonstrativo, texto: string) => {
-    const valor = Number(texto.replace(',', '.'));
+  const atualizar = (indice: number, chave: keyof Demonstrativo, valor: number) => {
     setColunas((atual) =>
-      atual.map((c, i) => (i === indice ? { ...c, [chave]: Number.isNaN(valor) ? 0 : valor } : c)),
+      atual.map((c, i) => (i === indice ? { ...c, [chave]: valor } : c)),
     );
   };
 
@@ -418,7 +417,7 @@ function DemonstrativosPainel(props: { cliente: Cliente; onSalvo: () => void; on
 function GrupoLinhas(props: {
   grupo: string;
   colunas: Demonstrativo[];
-  onAtualizar: (indice: number, chave: keyof Demonstrativo, texto: string) => void;
+  onAtualizar: (indice: number, chave: keyof Demonstrativo, valor: number) => void;
 }) {
   const campos = CAMPOS_DEMONSTRATIVO.filter((c) => c.grupo === props.grupo);
   return (
@@ -431,10 +430,9 @@ function GrupoLinhas(props: {
           <td className="col-item">{campo.rotulo}</td>
           {props.colunas.map((coluna, i) => (
             <td key={i} className="celula-valor">
-              <input
-                value={coluna[campo.chave] === 0 ? '' : String(coluna[campo.chave])}
-                placeholder="0"
-                onChange={(e) => props.onAtualizar(i, campo.chave, e.target.value)}
+              <InputMoeda
+                valor={Number(coluna[campo.chave]) || 0}
+                onChange={(v) => props.onAtualizar(i, campo.chave, v)}
               />
             </td>
           ))}

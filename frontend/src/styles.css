@@ -910,3 +910,102 @@ header {
   border-radius: 4px;
   font-size: 0.9rem;
 }
+
+.campo-senha {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.campo-senha input {
+  flex: 1;
+  padding-right: 36px;
+}
+
+.botao-olho {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #5a6b5a;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.botao-olho:hover {
+  color: #1c6b33;
+}
+
+.botao-link-login {
+  background: none;
+  border: none;
+  color: #1c6b33;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  padding: 4px 0;
+  margin-top: 4px;
+}
+
+.botao-link-sidebar {
+  background: none;
+  border: none;
+  color: #8a978a;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.botao-link-sidebar:hover {
+  color: #1c6b33;
+}
+
+.modal-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-corpo {
+  background: #fff;
+  border-radius: 10px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+
+.modal-corpo h2 {
+  margin: 0 0 16px;
+  color: #1c6b33;
+}
+
+.modal-corpo label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3c4b3c;
+  margin-bottom: 12px;
+}
+
+.modal-corpo input {
+  padding: 8px 10px;
+  border: 1px solid #bcc5bc;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.modal-acoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}

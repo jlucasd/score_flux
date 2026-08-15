@@ -1,14 +1,17 @@
 -- V8: Relato de campo múltiplo, perfil de usuário, campos extras no demonstrativo
+--
+-- Idempotente: funciona em DB limpo (H2 testes) e no estado parcial do Neon
+-- (onde cliente_id já foi dropado e cliente_id_new existe com dados).
+-- FlywayRepairConfig.repair() limpa migração com falha antes de re-executar.
 
--- 1) Relato de campo: permitir múltiplos por cliente
---    Recria a coluna sem UNIQUE (H2 não permite DROP inline unique facilmente).
---    Estratégia portável: cria coluna nova, copia, dropa antiga, renomeia.
-ALTER TABLE relato_campo ADD COLUMN cliente_id_new BIGINT;
-UPDATE relato_campo SET cliente_id_new = cliente_id;
-ALTER TABLE relato_campo DROP COLUMN cliente_id;
-ALTER TABLE relato_campo ALTER COLUMN cliente_id_new RENAME TO cliente_id;
+-- 1) Relato de campo: remover UNIQUE de cliente_id (permitir múltiplos por cliente)
+ALTER TABLE relato_campo ADD COLUMN IF NOT EXISTS cliente_id_new BIGINT;
+ALTER TABLE relato_campo DROP COLUMN IF EXISTS cliente_id;
+ALTER TABLE relato_campo DROP COLUMN IF EXISTS cliente_id_tmp;
+ALTER TABLE relato_campo RENAME COLUMN cliente_id_new TO cliente_id;
 ALTER TABLE relato_campo ALTER COLUMN cliente_id SET NOT NULL;
 ALTER TABLE relato_campo ADD FOREIGN KEY (cliente_id) REFERENCES cliente (id) ON DELETE CASCADE;
+
 ALTER TABLE relato_campo ADD COLUMN IF NOT EXISTS titulo VARCHAR(120);
 
 -- 2) Perfil de usuário

@@ -99,6 +99,16 @@ export const apiAuth = {
       method: 'POST',
       body: JSON.stringify({ email, senha }),
     }),
+  resetSenha: (email: string) =>
+    http<{ mensagem: string }>('/api/auth/reset-senha', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+  alterarSenha: (senhaAtual: string, novaSenha: string) =>
+    http<{ mensagem: string }>('/api/auth/alterar-senha', {
+      method: 'POST',
+      body: JSON.stringify({ senhaAtual, novaSenha }),
+    }),
   listarUsuarios: () => http<Usuario[]>('/api/usuarios'),
   criarUsuario: (dados: { nome: string; email: string; senha: string; perfil?: Perfil }) =>
     http<Usuario>('/api/usuarios', { method: 'POST', body: JSON.stringify(dados) }),
