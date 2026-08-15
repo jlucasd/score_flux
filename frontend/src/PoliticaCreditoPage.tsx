@@ -28,8 +28,7 @@ function encontrarOpcao(
         const erp = relato.possuiErp;
         const cob = relato.possuiCobranca;
         if (erp === null && cob === null) return null;
-        if (erp && cob) valor = sub.opcoes[0]?.rotulo ?? null;
-        else if (erp || cob) valor = sub.opcoes.length > 1 ? sub.opcoes[1].rotulo : null;
+        if (erp || cob) valor = sub.opcoes[0]?.rotulo ?? null;
         else valor = sub.opcoes[sub.opcoes.length - 1]?.rotulo ?? null;
         break;
       }

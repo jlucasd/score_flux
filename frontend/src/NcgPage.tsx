@@ -59,14 +59,29 @@ const vazio = (exercicio: number): Demonstrativo => ({
 const soma = (d: Demonstrativo, linhas: Linha[]) =>
   linhas.reduce((total, l) => total + (Number(d[l.chave]) || 0), 0);
 
+interface ExtraSomas { ao: number; po: number; alp: number; plp: number; }
+const EXTRA_ZERO: ExtraSomas = { ao: 0, po: 0, alp: 0, plp: 0 };
+
+function somaExtrasPorGrupo(extras: CampoExtra[]): ExtraSomas {
+  let ao = 0, po = 0, alp = 0, plp = 0;
+  for (const e of extras) {
+    const v = e.valor || 0;
+    if (e.grupo === 'ATIVO_CIRCULANTE') ao += v;
+    else if (e.grupo === 'PASSIVO_CIRCULANTE') po += v;
+    else if (e.grupo === 'ATIVO_LONGO') alp += v;
+    else if (e.grupo === 'PASSIVO_LONGO') plp += v;
+  }
+  return { ao, po, alp, plp };
+}
+
 /** Fórmulas da aba NCG, ao vivo (mesma lógica do backend, para reagir à digitação). */
-function calcular(d: Demonstrativo) {
+function calcular(d: Demonstrativo, ext: ExtraSomas = EXTRA_ZERO) {
   const af = d.caixaBancos + d.aplicacoes;
   const pf = d.emprestimosCurtoPrazo;
-  const ao = d.contasReceber + d.estoques + d.outrosAtivosCirculantes;
-  const po = d.fornecedores + d.salariosAPagar + d.outrasObrigacoesCirculantes;
-  const alp = d.realizavelLongoPrazo + d.imobilizado;
-  const plp = d.passivoNaoCirculante + d.patrimonioLiquido;
+  const ao = d.contasReceber + d.estoques + d.outrosAtivosCirculantes + ext.ao;
+  const po = d.fornecedores + d.salariosAPagar + d.outrasObrigacoesCirculantes + ext.po;
+  const alp = d.realizavelLongoPrazo + d.imobilizado + ext.alp;
+  const plp = d.passivoNaoCirculante + d.patrimonioLiquido + ext.plp;
 
   const ac = af + ao;
   const pc = pf + po;
@@ -94,6 +109,7 @@ export default function NcgPage() {
   const { clienteId, setClienteId, ano, setAno } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [colunas, setColunas] = useState<Demonstrativo[]>([]);
+  const [extrasMap, setExtrasMap] = useState<CampoExtra[][]>([[], []]);
   const [sujo, setSujo] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
@@ -117,12 +133,17 @@ export default function NcgPage() {
     }
     apiCredito
       .demonstrativos(clienteId)
-      .then((lista) => {
+      .then(async (lista) => {
         const porAno = new Map(lista.map((d) => [d.exercicio, d]));
-        setColunas([ano - 1, ano].map((y) => {
+        const cols = [ano - 1, ano].map((y) => {
           const existente = porAno.get(y);
           return existente ? { ...existente } : vazio(y);
-        }));
+        });
+        setColunas(cols);
+        const exts = await Promise.all(
+          cols.map((c) => (c.id ? apiCredito.listarCamposExtras(c.id) : Promise.resolve([]))),
+        );
+        setExtrasMap(exts);
         setSujo(false);
       })
       .catch((e) => setErro(e.message));
@@ -169,7 +190,9 @@ export default function NcgPage() {
       .catch((e) => setErro(e.message));
   };
 
-  const ordenadas = [...colunas].sort((a, b) => a.exercicio - b.exercicio);
+  const indices = colunas.map((_, i) => i).sort((a, b) => colunas[a].exercicio - colunas[b].exercicio);
+  const ordenadas = indices.map((i) => colunas[i]);
+  const ordenadosExtras = indices.map((i) => somaExtrasPorGrupo(extrasMap[i] || []));
 
   return (
     <>
@@ -211,6 +234,8 @@ export default function NcgPage() {
               key={i}
               demonstrativo={d}
               indice={i}
+              extras={extrasMap[i] || []}
+              onExtrasChange={(exts) => setExtrasMap((prev) => prev.map((e, j) => (j === i ? exts : e)))}
               onAtualizar={atualizarCampo}
               onSalvar={salvar}
               onImportar={importar}
@@ -235,8 +260,8 @@ export default function NcgPage() {
               </tr>
             </thead>
             <tbody>
-              {ordenadas.map((d) => {
-                const c = calcular(d);
+              {ordenadas.map((d, idx) => {
+                const c = calcular(d, ordenadosExtras[idx]);
                 return (
                   <tr key={d.exercicio}>
                     <td>{d.exercicio}</td>
@@ -269,7 +294,7 @@ export default function NcgPage() {
             Quando a NCG cresce mais que o CDG, a tesoura "abre" e a Tesouraria fica negativa —
             a empresa passa a depender de financiamento de curto prazo.
           </p>
-          <GraficoTesoura dados={ordenadas.map((d) => ({ ano: d.exercicio, ...calcular(d) }))} />
+          <GraficoTesoura dados={ordenadas.map((d, idx) => ({ ano: d.exercicio, ...calcular(d, ordenadosExtras[idx]) }))} />
         </section>
       )}
 
@@ -304,18 +329,15 @@ export default function NcgPage() {
 function CartaoExercicio(props: {
   demonstrativo: Demonstrativo;
   indice: number;
+  extras: CampoExtra[];
+  onExtrasChange: (extras: CampoExtra[]) => void;
   onAtualizar: (indice: number, chave: keyof Demonstrativo, valor: number) => void;
   onSalvar: (indice: number) => void;
   onImportar: (indice: number, arquivo: File) => void;
 }) {
-  const { demonstrativo: d, indice } = props;
+  const { demonstrativo: d, indice, extras } = props;
   const inputArquivo = useRef<HTMLInputElement>(null);
-  const [extras, setExtras] = useState<CampoExtra[]>([]);
   const [novoExtra, setNovoExtra] = useState<{ grupo: string; nome: string } | null>(null);
-
-  useEffect(() => {
-    if (d.id) apiCredito.listarCamposExtras(d.id).then(setExtras);
-  }, [d.id]);
 
   const somaExtras = (grupo: string) =>
     extras.filter((e) => e.grupo === grupo).reduce((t, e) => t + (e.valor || 0), 0);
@@ -332,18 +354,18 @@ function CartaoExercicio(props: {
   const salvarNovoExtra = () => {
     if (!novoExtra || !novoExtra.nome.trim() || !d.id) return;
     apiCredito.criarCampoExtra(d.id, { grupo: novoExtra.grupo, nome: novoExtra.nome.trim(), valor: 0 })
-      .then((c) => { setExtras((prev) => [...prev, c]); setNovoExtra(null); });
+      .then((c) => { props.onExtrasChange([...extras, c]); setNovoExtra(null); });
   };
 
   const atualizarExtra = (id: number, valor: number) => {
     apiCredito.atualizarCampoExtra(id, { valor }).then((c) => {
-      setExtras((prev) => prev.map((e) => (e.id === c.id ? c : e)));
+      props.onExtrasChange(extras.map((e) => (e.id === c.id ? c : e)));
     });
   };
 
   const excluirExtra = (id: number) => {
     apiCredito.excluirCampoExtra(id).then(() => {
-      setExtras((prev) => prev.filter((e) => e.id !== id));
+      props.onExtrasChange(extras.filter((e) => e.id !== id));
     });
   };
 

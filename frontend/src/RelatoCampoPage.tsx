@@ -162,17 +162,19 @@ export default function RelatoCampoPage() {
               </tr>
             </thead>
             <tbody>
-              {relatos.map((r) => (
+              {relatos.map((r, idx) => (
                 <tr key={r.id}>
                   <td className="col-item">
                     <a href="#" onClick={(e) => { e.preventDefault(); abrirRelato(r); }}>
-                      {r.titulo || `Relato #${r.id}`}
+                      {r.titulo || `Relato ${idx + 1}`}
                     </a>
                   </td>
                   <td>{r.conceitoComercial ?? '—'}</td>
                   <td>
                     {r.atualizadoEm
-                      ? new Date(r.atualizadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                      ? new Date(r.atualizadoEm + 'Z').toLocaleString('pt-BR', {
+                          dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo',
+                        })
                       : '—'}
                   </td>
                   <td>
@@ -295,9 +297,8 @@ export default function RelatoCampoPage() {
             {relatoAtual.atualizadoEm && (
               <span className="dica">
                 Última atualização:{' '}
-                {new Date(relatoAtual.atualizadoEm).toLocaleString('pt-BR', {
-                  dateStyle: 'short',
-                  timeStyle: 'short',
+                {new Date(relatoAtual.atualizadoEm + 'Z').toLocaleString('pt-BR', {
+                  dateStyle: 'short', timeStyle: 'short', timeZone: 'America/Sao_Paulo',
                 })}
               </span>
             )}
