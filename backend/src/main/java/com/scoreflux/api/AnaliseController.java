@@ -3,6 +3,8 @@ package com.scoreflux.api;
 import com.scoreflux.api.dto.AnaliseDetalheDTO;
 import com.scoreflux.api.dto.PoliticaDTO;
 import com.scoreflux.domain.AnaliseCredito;
+import com.scoreflux.domain.Subcriterio;
+import com.scoreflux.repository.SubcriterioRepository;
 import com.scoreflux.service.CreditoService;
 import com.scoreflux.service.ParecerPdfService;
 import com.scoreflux.service.ScoreCalculator;
@@ -22,10 +24,13 @@ public class AnaliseController {
 
     private final CreditoService service;
     private final ParecerPdfService parecerPdfService;
+    private final SubcriterioRepository subcriterioRepository;
 
-    public AnaliseController(CreditoService service, ParecerPdfService parecerPdfService) {
+    public AnaliseController(CreditoService service, ParecerPdfService parecerPdfService,
+                             SubcriterioRepository subcriterioRepository) {
         this.service = service;
         this.parecerPdfService = parecerPdfService;
+        this.subcriterioRepository = subcriterioRepository;
     }
 
     public record AnaliseResumoResponse(Long id, String status, LocalDateTime criadaEm,
@@ -94,6 +99,17 @@ public class AnaliseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void excluir(@PathVariable Long id) {
         service.excluirAnalise(id);
+    }
+
+    public record PesoRequest(BigDecimal peso) {}
+
+    @PutMapping("/subcriterios/{id}/peso")
+    public PoliticaDTO atualizarPeso(@PathVariable Long id, @RequestBody PesoRequest r) {
+        Subcriterio sub = subcriterioRepository.findById(id)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Subcritério não encontrado: " + id));
+        sub.setPeso(r.peso());
+        subcriterioRepository.save(sub);
+        return service.politicaVigente();
     }
 
     @GetMapping("/analises/{id}/parecer")

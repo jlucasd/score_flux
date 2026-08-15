@@ -3,10 +3,6 @@ package com.scoreflux.domain;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/**
- * Aba "Relato de Campo": questionário estruturado, um por cliente (upsert).
- * As opções fechadas alimentam os subcritérios qualitativos 1.1, 2.3 e 4.1–4.4.
- */
 @Entity
 @Table(name = "relato_campo")
 public class RelatoCampo {
@@ -15,9 +11,12 @@ public class RelatoCampo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cliente_id", unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "cliente_id")
     private Cliente cliente;
+
+    @Column(length = 120)
+    private String titulo;
 
     @Column(name = "conceito_comercial", length = 40)
     private String conceitoComercial;
@@ -65,6 +64,8 @@ public class RelatoCampo {
     public void setId(Long id) { this.id = id; }
     public Cliente getCliente() { return cliente; }
     public void setCliente(Cliente cliente) { this.cliente = cliente; }
+    public String getTitulo() { return titulo; }
+    public void setTitulo(String titulo) { this.titulo = titulo; }
     public String getConceitoComercial() { return conceitoComercial; }
     public void setConceitoComercial(String conceitoComercial) { this.conceitoComercial = conceitoComercial; }
     public String getConceitoComercialJustificativa() { return conceitoComercialJustificativa; }

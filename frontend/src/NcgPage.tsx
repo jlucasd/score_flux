@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num } from './api';
+import { CampoExtra, Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num } from './api';
 import { Campo, InputMoeda } from './ui';
 import { useAnalise, useAutosave } from './contexto';
 
@@ -310,17 +310,48 @@ function CartaoExercicio(props: {
 }) {
   const { demonstrativo: d, indice } = props;
   const inputArquivo = useRef<HTMLInputElement>(null);
+  const [extras, setExtras] = useState<CampoExtra[]>([]);
+  const [novoExtra, setNovoExtra] = useState<{ grupo: string; nome: string } | null>(null);
 
-  const ac = soma(d, ATIVO_CIRCULANTE);
-  const totalAtivo = ac + soma(d, ATIVO_LONGO);
-  const pc = soma(d, PASSIVO_CIRCULANTE);
-  const totalPassivo = pc + soma(d, PASSIVO_LONGO);
+  useEffect(() => {
+    if (d.id) apiCredito.listarCamposExtras(d.id).then(setExtras);
+  }, [d.id]);
 
-  const bloco = (titulo: string, linhas: Linha[], subtotal?: [string, number]) => (
+  const somaExtras = (grupo: string) =>
+    extras.filter((e) => e.grupo === grupo).reduce((t, e) => t + (e.valor || 0), 0);
+
+  const ac = soma(d, ATIVO_CIRCULANTE) + somaExtras('ATIVO_CIRCULANTE');
+  const totalAtivo = ac + soma(d, ATIVO_LONGO) + somaExtras('ATIVO_LONGO');
+  const pc = soma(d, PASSIVO_CIRCULANTE) + somaExtras('PASSIVO_CIRCULANTE');
+  const totalPassivo = pc + soma(d, PASSIVO_LONGO) + somaExtras('PASSIVO_LONGO');
+
+  const adicionarExtra = (grupo: string) => {
+    setNovoExtra({ grupo, nome: '' });
+  };
+
+  const salvarNovoExtra = () => {
+    if (!novoExtra || !novoExtra.nome.trim() || !d.id) return;
+    apiCredito.criarCampoExtra(d.id, { grupo: novoExtra.grupo, nome: novoExtra.nome.trim(), valor: 0 })
+      .then((c) => { setExtras((prev) => [...prev, c]); setNovoExtra(null); });
+  };
+
+  const atualizarExtra = (id: number, valor: number) => {
+    apiCredito.atualizarCampoExtra(id, { valor }).then((c) => {
+      setExtras((prev) => prev.map((e) => (e.id === c.id ? c : e)));
+    });
+  };
+
+  const excluirExtra = (id: number) => {
+    apiCredito.excluirCampoExtra(id).then(() => {
+      setExtras((prev) => prev.filter((e) => e.id !== id));
+    });
+  };
+
+  const bloco = (titulo: string, linhas: Linha[], grupo: string, subtotal?: [string, number]) => (
     <table className="tabela-ncg">
       <thead>
         <tr>
-          <th colSpan={2}>{titulo}</th>
+          <th colSpan={3}>{titulo}</th>
         </tr>
       </thead>
       <tbody>
@@ -333,12 +364,51 @@ function CartaoExercicio(props: {
                 onChange={(v) => props.onAtualizar(indice, l.chave, v)}
               />
             </td>
+            <td></td>
           </tr>
         ))}
+        {extras.filter((e) => e.grupo === grupo).map((e) => (
+          <tr key={`extra-${e.id}`}>
+            <td className="col-item">{e.nome}</td>
+            <td className="celula-valor">
+              <InputMoeda valor={e.valor || 0} onChange={(v) => atualizarExtra(e.id, v)} />
+            </td>
+            <td>
+              <button className="botao-excluir" title="Remover campo" onClick={() => excluirExtra(e.id)}>×</button>
+            </td>
+          </tr>
+        ))}
+        {novoExtra?.grupo === grupo && (
+          <tr>
+            <td>
+              <input
+                autoFocus
+                placeholder="Nome do campo"
+                value={novoExtra.nome}
+                onChange={(e) => setNovoExtra({ ...novoExtra, nome: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') salvarNovoExtra(); if (e.key === 'Escape') setNovoExtra(null); }}
+              />
+            </td>
+            <td>
+              <button className="botao-secundario" onClick={salvarNovoExtra}>OK</button>
+            </td>
+            <td>
+              <button className="botao-excluir" onClick={() => setNovoExtra(null)}>×</button>
+            </td>
+          </tr>
+        )}
+        <tr>
+          <td colSpan={3}>
+            {d.id && (
+              <button className="botao-link" onClick={() => adicionarExtra(grupo)}>+ Adicionar campo</button>
+            )}
+          </td>
+        </tr>
         {subtotal && (
           <tr>
             <td className="col-item total">{subtotal[0]}</td>
             <td className="total">{brl(subtotal[1])}</td>
+            <td></td>
           </tr>
         )}
       </tbody>
@@ -370,12 +440,12 @@ function CartaoExercicio(props: {
 
       <div className="bloco-ap">
         <div>
-          {bloco('ATIVO — Circulante', ATIVO_CIRCULANTE, ['Ativo Circulante', ac])}
-          {bloco('ATIVO — Longo Prazo', ATIVO_LONGO, ['Total do Ativo', totalAtivo])}
+          {bloco('ATIVO — Circulante', ATIVO_CIRCULANTE, 'ATIVO_CIRCULANTE', ['Ativo Circulante', ac])}
+          {bloco('ATIVO — Longo Prazo', ATIVO_LONGO, 'ATIVO_LONGO', ['Total do Ativo', totalAtivo])}
         </div>
         <div>
-          {bloco('PASSIVO — Circulante', PASSIVO_CIRCULANTE, ['Passivo Circulante', pc])}
-          {bloco('PASSIVO — Longo Prazo e PL', PASSIVO_LONGO, ['Total do Passivo', totalPassivo])}
+          {bloco('PASSIVO — Circulante', PASSIVO_CIRCULANTE, 'PASSIVO_CIRCULANTE', ['Passivo Circulante', pc])}
+          {bloco('PASSIVO — Longo Prazo e PL', PASSIVO_LONGO, 'PASSIVO_LONGO', ['Total do Passivo', totalPassivo])}
         </div>
       </div>
       {totalAtivo !== totalPassivo && (

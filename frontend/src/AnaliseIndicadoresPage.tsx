@@ -3,7 +3,15 @@ import { Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num, pct } 
 import { Campo, InputMoeda } from './ui';
 import { useAnalise, useAutosave } from './contexto';
 
-const TITULO_DERIVADO = 'Derivado do balanço — edite as contas na tela Balanço';
+const ajustarAgregado = (
+  d: Demonstrativo,
+  novoTotal: number,
+  somaAtual: number,
+  campoResidual: keyof Demonstrativo,
+): Partial<Demonstrativo> => {
+  const diff = novoTotal - somaAtual;
+  return { [campoResidual]: Number(d[campoResidual]) + diff };
+};
 
 const CAMPOS_MONETARIOS: (keyof Demonstrativo)[] = [
   'receitaBruta', 'lucroLiquido', 'caixaBancos', 'aplicacoes', 'contasReceber', 'estoques',
@@ -86,6 +94,11 @@ export default function AnaliseIndicadoresPage() {
 
   const atualizar = (indice: number, chave: keyof Demonstrativo, valor: number) => {
     setColunas((atual) => atual.map((c, i) => (i === indice ? { ...c, [chave]: valor } : c)));
+    setSujo(true);
+  };
+
+  const atualizarPatch = (indice: number, patch: Partial<Demonstrativo>) => {
+    setColunas((atual) => atual.map((c, i) => (i === indice ? { ...c, ...patch } : c)));
     setSujo(true);
   };
 
@@ -196,23 +209,23 @@ export default function AnaliseIndicadoresPage() {
                   valores={colunas.map((d) => pct(endividamento(d)))}
                   media={pct(mediaCalculaveis(colunas.map(endividamento)))}
                 />
-                <LinhaDerivada rotulo="Passivo Circulante (em R$)" colunas={colunas}
-                               calc={calcPC} media={mediaBrl} />
+                <LinhaAgregado rotulo="Passivo Circulante (em R$)" colunas={colunas}
+                               calc={calcPC} campoResidual="outrasObrigacoesCirculantes" media={mediaBrl} onAtualizar={atualizarPatch} />
                 <LinhaConta rotulo="Passivo Não Circulante (em R$)" chave="passivoNaoCirculante"
                             colunas={colunas} media={mediaBrl} onAtualizar={atualizar} />
-                <LinhaDerivada rotulo="Ativo Total (em R$)" colunas={colunas}
-                               calc={calcAT} media={mediaBrl} />
+                <LinhaAgregado rotulo="Ativo Total (em R$)" colunas={colunas}
+                               calc={calcAT} campoResidual="imobilizado" media={mediaBrl} onAtualizar={atualizarPatch} />
                 <LinhaIndicador
                   rotulo="Grau Liquidez Seca"
                   valores={colunas.map((d) => num(liquidezSeca(d)))}
                   media={num(mediaCalculaveis(colunas.map(liquidezSeca)))}
                 />
-                <LinhaDerivada rotulo="Ativo Circulante" colunas={colunas}
-                               calc={calcAC} media={mediaBrl} />
+                <LinhaAgregado rotulo="Ativo Circulante" colunas={colunas}
+                               calc={calcAC} campoResidual="outrosAtivosCirculantes" media={mediaBrl} onAtualizar={atualizarPatch} />
                 <LinhaConta rotulo="Estoques (em R$)" chave="estoques"
                             colunas={colunas} media={mediaBrl} onAtualizar={atualizar} />
-                <LinhaDerivada rotulo="Passivo Circulante" colunas={colunas}
-                               calc={calcPC} media={mediaBrl} />
+                <LinhaAgregado rotulo="Passivo Circulante" colunas={colunas}
+                               calc={calcPC} campoResidual="outrasObrigacoesCirculantes" media={mediaBrl} onAtualizar={atualizarPatch} />
               </tbody>
               <tfoot>
                 <tr>
@@ -223,6 +236,10 @@ export default function AnaliseIndicadoresPage() {
                       exercicio={d.exercicio}
                       onImportar={(f) => importar(i, f)}
                       onSalvar={() => salvar(i)}
+                      onLimpar={() => {
+                        setColunas((atual) => atual.map((c, j) => (j === i ? { ...vazio(c.exercicio), id: c.id } : c)));
+                        setSujo(true);
+                      }}
                     />
                   ))}
                   <td></td>
@@ -273,19 +290,23 @@ function LinhaConta(props: {
   );
 }
 
-/** Linha derivada das contas granulares do balanço — somente leitura. */
-function LinhaDerivada(props: {
+function LinhaAgregado(props: {
   rotulo: string;
   colunas: Demonstrativo[];
   calc: (d: Demonstrativo) => number;
+  campoResidual: keyof Demonstrativo;
   media: (valores: number[]) => string;
+  onAtualizar: (indice: number, patch: Partial<Demonstrativo>) => void;
 }) {
   return (
     <tr>
       <td className="col-item">{props.rotulo}</td>
       {props.colunas.map((d, i) => (
-        <td key={i} className="celula-derivada" title={TITULO_DERIVADO}>
-          {brl(props.calc(d))}
+        <td key={i} className="celula-valor">
+          <InputMoeda
+            valor={props.calc(d)}
+            onChange={(v) => props.onAtualizar(i, ajustarAgregado(d, v, props.calc(d), props.campoResidual))}
+          />
         </td>
       ))}
       <td>{props.media(props.colunas.map(props.calc))}</td>
@@ -297,6 +318,7 @@ function CelulaAcoes(props: {
   exercicio: number;
   onImportar: (arquivo: File) => void;
   onSalvar: () => void;
+  onLimpar: () => void;
 }) {
   const inputArquivo = useRef<HTMLInputElement>(null);
   return (
@@ -314,6 +336,9 @@ function CelulaAcoes(props: {
       />
       <button className="botao-secundario" onClick={() => inputArquivo.current?.click()}>
         Importar PDF
+      </button>{' '}
+      <button className="botao-secundario" onClick={props.onLimpar}>
+        Limpar
       </button>{' '}
       <button onClick={props.onSalvar}>Salvar {props.exercicio}</button>
     </td>

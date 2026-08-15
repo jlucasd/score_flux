@@ -32,12 +32,13 @@ public class UsuarioController {
 
     public record UsuarioRequest(@NotBlank String nome,
                                  @NotBlank @Email String email,
-                                 @NotBlank @Size(min = 6, message = "senha deve ter ao menos 6 caracteres") String senha) {
+                                 @NotBlank @Size(min = 6, message = "senha deve ter ao menos 6 caracteres") String senha,
+                                 String perfil) {
     }
 
-    public record UsuarioResponse(Long id, String nome, String email, boolean ativo, LocalDateTime criadoEm) {
+    public record UsuarioResponse(Long id, String nome, String email, String perfil, boolean ativo, LocalDateTime criadoEm) {
         static UsuarioResponse de(Usuario u) {
-            return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.isAtivo(), u.getCriadoEm());
+            return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.getPerfil(), u.isAtivo(), u.getCriadoEm());
         }
     }
 
@@ -59,6 +60,9 @@ public class UsuarioController {
         usuario.setNome(request.nome());
         usuario.setEmail(request.email());
         usuario.setSenhaHash(encoder.encode(request.senha()));
+        if (request.perfil() != null && !request.perfil().isBlank()) {
+            usuario.setPerfil(request.perfil());
+        }
         return UsuarioResponse.de(usuarios.save(usuario));
     }
 

@@ -82,10 +82,13 @@ async function http<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json();
 }
 
+export type Perfil = 'ADMINISTRADOR' | 'COMERCIAL' | 'FINANCEIRO';
+
 export interface Usuario {
   id: number;
   nome: string;
   email: string;
+  perfil: Perfil;
   ativo: boolean;
   criadoEm: string;
 }
@@ -97,7 +100,7 @@ export const apiAuth = {
       body: JSON.stringify({ email, senha }),
     }),
   listarUsuarios: () => http<Usuario[]>('/api/usuarios'),
-  criarUsuario: (dados: { nome: string; email: string; senha: string }) =>
+  criarUsuario: (dados: { nome: string; email: string; senha: string; perfil?: Perfil }) =>
     http<Usuario>('/api/usuarios', { method: 'POST', body: JSON.stringify(dados) }),
   excluirUsuario: (id: number) => http<void>(`/api/usuarios/${id}`, { method: 'DELETE' }),
 };
@@ -272,6 +275,8 @@ export interface AnaliseDetalhe {
 }
 
 export interface RelatoCampo {
+  id: number | null;
+  titulo: string | null;
   clienteId: number;
   clienteNome: string;
   clienteCpfCnpj: string | null;
@@ -292,8 +297,16 @@ export interface RelatoCampo {
 }
 
 export type RelatoCampoDados = Omit<
-  RelatoCampo, 'clienteId' | 'clienteNome' | 'clienteCpfCnpj' | 'atualizadoEm'
+  RelatoCampo, 'id' | 'clienteId' | 'clienteNome' | 'clienteCpfCnpj' | 'atualizadoEm'
 >;
+
+export interface CampoExtra {
+  id: number;
+  demonstrativoId: number;
+  grupo: string;
+  nome: string;
+  valor: number;
+}
 
 export const apiCredito = {
   listarClientes: () => http<Cliente[]>('/api/clientes'),
@@ -312,11 +325,18 @@ export const apiCredito = {
   politica: () => http<Politica>('/api/politica'),
   faixas: () => http<Faixa[]>('/api/politica/faixas'),
   relatoCampo: (clienteId: number) => http<RelatoCampo>(`/api/clientes/${clienteId}/relato-campo`),
-  salvarRelatoCampo: (clienteId: number, dados: RelatoCampoDados) =>
-    http<RelatoCampo>(`/api/clientes/${clienteId}/relato-campo`, {
+  listarRelatos: (clienteId: number) => http<RelatoCampo[]>(`/api/clientes/${clienteId}/relatos`),
+  criarRelato: (clienteId: number, dados: RelatoCampoDados) =>
+    http<RelatoCampo>(`/api/clientes/${clienteId}/relatos`, {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }),
+  salvarRelatoCampo: (relatoId: number, dados: RelatoCampoDados) =>
+    http<RelatoCampo>(`/api/relatos/${relatoId}`, {
       method: 'PUT',
       body: JSON.stringify(dados),
     }),
+  excluirRelato: (relatoId: number) => http<void>(`/api/relatos/${relatoId}`, { method: 'DELETE' }),
   analises: (clienteId: number) => http<AnaliseResumo[]>(`/api/clientes/${clienteId}/analises`),
   criarAnalise: (clienteId: number) =>
     http<AnaliseDetalhe>(`/api/clientes/${clienteId}/analises`, { method: 'POST' }),
@@ -329,6 +349,24 @@ export const apiCredito = {
   concluirAnalise: (id: number) => http<AnaliseDetalhe>(`/api/analises/${id}/concluir`, { method: 'POST' }),
   reabrirAnalise: (id: number) => http<AnaliseDetalhe>(`/api/analises/${id}/reabrir`, { method: 'POST' }),
   excluirAnalise: (id: number) => http<void>(`/api/analises/${id}`, { method: 'DELETE' }),
+  atualizarPeso: (subcriterioId: number, peso: number) =>
+    http<Politica>(`/api/subcriterios/${subcriterioId}/peso`, {
+      method: 'PUT',
+      body: JSON.stringify({ peso }),
+    }),
+  listarCamposExtras: (demoId: number) =>
+    http<CampoExtra[]>(`/api/demonstrativos/${demoId}/campos-extras`),
+  criarCampoExtra: (demoId: number, dados: { grupo: string; nome: string; valor?: number }) =>
+    http<CampoExtra>(`/api/demonstrativos/${demoId}/campos-extras`, {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    }),
+  atualizarCampoExtra: (id: number, dados: { nome?: string; valor?: number }) =>
+    http<CampoExtra>(`/api/campos-extras/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(dados),
+    }),
+  excluirCampoExtra: (id: number) => http<void>(`/api/campos-extras/${id}`, { method: 'DELETE' }),
 };
 
 // ---- Fluxo de Caixa (lançamentos diários) ----

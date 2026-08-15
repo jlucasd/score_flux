@@ -891,3 +891,22 @@ header {
   gap: 8px;
   margin-left: auto;
 }
+
+.botao-link {
+  background: none;
+  border: none;
+  color: #1c6b33;
+  cursor: pointer;
+  padding: 2px 0;
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.campo-peso {
+  text-align: right;
+  width: 5rem;
+  padding: 2px 6px;
+  border: 1px solid #bcc5bc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}

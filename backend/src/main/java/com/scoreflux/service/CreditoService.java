@@ -157,22 +157,49 @@ public class CreditoService {
                 politica.getInflacaoReferencia(), subs);
     }
 
-    // ---- Relato de campo (um por cliente, upsert) ----
+    // ---- Relato de campo (múltiplos por cliente) ----
+
+    @Transactional(readOnly = true)
+    public List<RelatoCampo> listarRelatos(Long clienteId) {
+        buscarCliente(clienteId);
+        List<RelatoCampo> relatos = relatoCampoRepository.findAllByClienteIdOrderByAtualizadoEmDesc(clienteId);
+        relatos.forEach(r -> r.getCliente().getNome());
+        return relatos;
+    }
 
     @Transactional(readOnly = true)
     public RelatoCampo relatoCampo(Long clienteId) {
         Cliente cliente = buscarCliente(clienteId);
-        RelatoCampo relato = relatoCampoRepository.findByClienteId(clienteId)
-                .orElseGet(RelatoCampo::new); // em branco, não persistido — só existe quando salvar
-        relato.setCliente(cliente); // entidade carregada (open-in-view desligado)
+        RelatoCampo relato = relatoCampoRepository.findFirstByClienteIdOrderByAtualizadoEmDesc(clienteId)
+                .orElseGet(RelatoCampo::new);
+        relato.setCliente(cliente);
         return relato;
     }
 
-    public RelatoCampo salvarRelatoCampo(Long clienteId, RelatoCampo dados) {
+    public RelatoCampo criarRelatoCampo(Long clienteId, RelatoCampo dados) {
         Cliente cliente = buscarCliente(clienteId);
-        RelatoCampo relato = relatoCampoRepository.findByClienteId(clienteId)
-                .orElseGet(RelatoCampo::new);
+        RelatoCampo relato = new RelatoCampo();
         relato.setCliente(cliente);
+        copiarDadosRelato(relato, dados);
+        relato.setAtualizadoEm(LocalDateTime.now());
+        return relatoCampoRepository.save(relato);
+    }
+
+    public RelatoCampo salvarRelatoCampo(Long relatoId, RelatoCampo dados) {
+        RelatoCampo relato = relatoCampoRepository.findById(relatoId)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Relato não encontrado: " + relatoId));
+        relato.getCliente().getNome(); // force-initialize (open-in-view desligado)
+        copiarDadosRelato(relato, dados);
+        relato.setAtualizadoEm(LocalDateTime.now());
+        return relatoCampoRepository.save(relato);
+    }
+
+    public void excluirRelato(Long relatoId) {
+        relatoCampoRepository.deleteById(relatoId);
+    }
+
+    private void copiarDadosRelato(RelatoCampo relato, RelatoCampo dados) {
+        relato.setTitulo(dados.getTitulo());
         relato.setConceitoComercial(dados.getConceitoComercial());
         relato.setConceitoComercialJustificativa(dados.getConceitoComercialJustificativa());
         relato.setTempoMercado(dados.getTempoMercado());
@@ -186,8 +213,6 @@ public class CreditoService {
         relato.setRiscoClimatico(dados.getRiscoClimatico());
         relato.setRiscoClimaticoJustificativa(dados.getRiscoClimaticoJustificativa());
         relato.setObservacoes(dados.getObservacoes());
-        relato.setAtualizadoEm(LocalDateTime.now());
-        return relatoCampoRepository.save(relato);
     }
 
     // ---- Análises ----

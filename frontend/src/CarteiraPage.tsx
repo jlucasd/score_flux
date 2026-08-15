@@ -92,7 +92,7 @@ export default function CarteiraPage() {
             <p className="destaque">
               <span className="selo selo-ok">OK</span> dentro do limite ·{' '}
               <span className="selo selo-bloquear">BLOQUEAR</span> saldo em aberto excede o limite ·{' '}
-              <span className="selo">SEM_LIMITE</span> cliente sem análise concluída
+              <span className="selo">SEM_LIMITE</span> sem dados suficientes para calcular limite
             </p>
           </>
         )}

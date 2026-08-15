@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AnaliseDetalhe, AnaliseResumo, Cliente, Demonstrativo, Indicadores, Politica,
-  apiCredito, baixarParecer, brl, num, pct,
+  apiCredito, baixarParecer, brl, num, pct, UFS,
 } from './api';
 import { Campo } from './ui';
 import { useAnalise } from './contexto';
@@ -85,6 +85,25 @@ const FORM_CLIENTE_VAZIO = {
   telefone: '', email: '', endereco: '', numero: '', bairro: '', cep: '',
 };
 
+async function buscarCnpj(cnpj: string): Promise<Record<string, string>> {
+  const limpo = cnpj.replace(/\D/g, '');
+  if (limpo.length !== 14) throw new Error('CNPJ deve ter 14 dígitos');
+  const res = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${limpo}`);
+  if (!res.ok) throw new Error('CNPJ não encontrado');
+  const d = await res.json();
+  return {
+    nome: d.razao_social ?? '',
+    municipio: d.municipio ?? '',
+    uf: (d.uf ?? '').toUpperCase(),
+    endereco: [d.descricao_tipo_de_logradouro, d.logradouro].filter(Boolean).join(' '),
+    numero: d.numero ?? '',
+    bairro: d.bairro ?? '',
+    cep: d.cep ?? '',
+    telefone: d.ddd_telefone_1 ? `(${d.ddd_telefone_1.slice(0, 2)}) ${d.ddd_telefone_1.slice(2)}` : '',
+    email: d.email ?? '',
+  };
+}
+
 function ClientesPainel(props: {
   clientes: Cliente[];
   clienteId: number | null;
@@ -96,6 +115,7 @@ function ClientesPainel(props: {
   const [modo, setModo] = useState<'novo' | 'editando'>('novo');
   const [form, setForm] = useState(FORM_CLIENTE_VAZIO);
   const [confirmando, setConfirmando] = useState(false);
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
 
   const clienteSel = props.clientes.find((c) => c.id === props.clienteId) ?? null;
 
@@ -196,8 +216,24 @@ function ClientesPainel(props: {
                  onChange={(e) => setForm({ ...form, nome: e.target.value })} />
         </Campo>
         <Campo label="CPF/CNPJ">
-          <input placeholder="00.000.000/0000-00" className="campo-medio" value={form.cpfCnpj}
-                 onChange={(e) => setForm({ ...form, cpfCnpj: e.target.value })} />
+          <div style={{ display: 'flex', gap: '0.25rem' }}>
+            <input placeholder="00.000.000/0000-00" className="campo-medio" value={form.cpfCnpj}
+                   onChange={(e) => setForm({ ...form, cpfCnpj: e.target.value })} />
+            <button
+              className="botao-secundario"
+              disabled={buscandoCnpj || form.cpfCnpj.replace(/\D/g, '').length !== 14}
+              title="Buscar dados pelo CNPJ"
+              onClick={() => {
+                setBuscandoCnpj(true);
+                buscarCnpj(form.cpfCnpj)
+                  .then((d) => setForm((f) => ({ ...f, ...d, cpfCnpj: f.cpfCnpj, tipo: f.tipo })))
+                  .catch((e) => props.onErro(e.message))
+                  .finally(() => setBuscandoCnpj(false));
+              }}
+            >
+              {buscandoCnpj ? 'Buscando…' : 'Buscar'}
+            </button>
+          </div>
         </Campo>
         <Campo label="Tipo">
           <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
@@ -238,8 +274,12 @@ function ClientesPainel(props: {
                  onChange={(e) => setForm({ ...form, municipio: e.target.value })} />
         </Campo>
         <Campo label="UF">
-          <input placeholder="SC" className="campo-uf" maxLength={2} value={form.uf}
-                 onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })} />
+          <select className="campo-uf" value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value })}>
+            <option value="">—</option>
+            {UFS.map((sigla) => (
+              <option key={sigla} value={sigla}>{sigla}</option>
+            ))}
+          </select>
         </Campo>
         <button disabled={!form.nome.trim()} onClick={salvar}>
           {editando ? 'Salvar alterações' : 'Cadastrar cliente'}

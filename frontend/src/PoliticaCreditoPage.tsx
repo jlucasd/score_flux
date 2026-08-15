@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  Cliente, Demonstrativo, Faixa, Politica, SubcriterioPolitica,
-  apiCredito, brl, num, pct,
+  Cliente, Demonstrativo, Faixa, Indicadores, OpcaoPolitica, Politica, RelatoCampo,
+  SubcriterioPolitica, apiCredito, brl, num, pct,
 } from './api';
 import { Campo } from './ui';
 import { useAnalise } from './contexto';
@@ -10,13 +10,72 @@ import { useAnalise } from './contexto';
 const fmtPeso = (v: number) =>
   (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
 
+function encontrarOpcao(
+  sub: SubcriterioPolitica,
+  relato: RelatoCampo | null,
+  indicadores: Indicadores | null,
+  inflacao: number,
+): OpcaoPolitica | null {
+  if (relato) {
+    let valor: string | null = null;
+    switch (sub.codigo) {
+      case '1.1': valor = relato.conceitoComercial; break;
+      case '2.3': valor = relato.tempoMercado; break;
+      case '4.1': valor = relato.bandeira; break;
+      case '4.3': valor = relato.unidadesNegocio; break;
+      case '4.4': valor = relato.riscoClimatico; break;
+      case '4.2': {
+        const erp = relato.possuiErp;
+        const cob = relato.possuiCobranca;
+        if (erp === null && cob === null) return null;
+        if (erp && cob) valor = sub.opcoes[0]?.rotulo ?? null;
+        else if (erp || cob) valor = sub.opcoes.length > 1 ? sub.opcoes[1].rotulo : null;
+        else valor = sub.opcoes[sub.opcoes.length - 1]?.rotulo ?? null;
+        break;
+      }
+    }
+    if (valor) {
+      const op = sub.opcoes.find((o) => o.rotulo === valor);
+      if (op) return op;
+    }
+  }
+
+  if (indicadores && sub.automatico) {
+    const inf = inflacao / 100;
+    let nota: number | null = null;
+    switch (sub.codigo) {
+      case '3.1':
+        if (indicadores.evolucaoVendas != null)
+          nota = indicadores.evolucaoVendas > inf ? 100 : indicadores.evolucaoVendas >= 0 ? 50 : 0;
+        break;
+      case '3.2':
+        if (indicadores.roeMedia != null)
+          nota = indicadores.roeMedia >= 0.15 ? 100 : indicadores.roeMedia >= 0.10 ? 50 : 0;
+        break;
+      case '3.3':
+        if (indicadores.endividamentoMedia != null)
+          nota = indicadores.endividamentoMedia <= 0.50 ? 100 : indicadores.endividamentoMedia < 0.80 ? 50 : 0;
+        break;
+      case '3.4':
+        if (indicadores.liquidezSecaMedia != null)
+          nota = indicadores.liquidezSecaMedia > 1 ? 100 : 0;
+        break;
+    }
+    if (nota !== null) {
+      const op = sub.opcoes.find((o) => o.nota === nota);
+      if (op) return op;
+    }
+  }
+
+  return null;
+}
+
 export default function PoliticaCreditoPage() {
   const { clienteId, setClienteId } = useAnalise();
   const [politica, setPolitica] = useState<Politica | null>(null);
   const [faixas, setFaixas] = useState<Faixa[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [ultimoDemo, setUltimoDemo] = useState<Demonstrativo | null>(null);
-  // Peso atribuído (0–100) digitado por opção, exatamente como na planilha — nada é persistido.
   const [atribuidos, setAtribuidos] = useState<Record<number, number>>({});
   const [erro, setErro] = useState<string | null>(null);
 
@@ -46,6 +105,24 @@ export default function PoliticaCreditoPage() {
       })
       .catch((e) => setErro(e.message));
   }, [clienteId]);
+
+  useEffect(() => {
+    if (clienteId === null || !politica) return;
+    const novoAtribuido: Record<number, number> = {};
+
+    Promise.all([
+      apiCredito.relatoCampo(clienteId).catch(() => null),
+      apiCredito.indicadores(clienteId).catch(() => null),
+    ]).then(([relato, indicadores]: [RelatoCampo | null, Indicadores | null]) => {
+      for (const sub of politica.subcriterios) {
+        const match = encontrarOpcao(sub, relato, indicadores, politica.inflacaoReferencia);
+        if (match) {
+          for (const op of sub.opcoes) novoAtribuido[op.id] = op.id === match.id ? 100 : 0;
+        }
+      }
+      setAtribuidos(novoAtribuido);
+    });
+  }, [clienteId, politica]);
 
   /** Fórmula da planilha: pesoCliente = Σ opções (peso do subcritério × pesoAtribuído / 100). */
   const pesoCliente = (sub: SubcriterioPolitica) =>
@@ -95,8 +172,8 @@ export default function PoliticaCreditoPage() {
         <h2>Avaliação de Risco de Crédito de Cooperativas e Revendas</h2>
         {cliente && <p className="subtitulo">{cliente.nome}{cliente.uf ? ` — ${cliente.uf}` : ''}</p>}
         <p className="dica">
-          Simulador fiel à aba da planilha — os valores digitados aqui não são gravados; a análise
-          oficial (com histórico e parecer) fica no menu Cadastro do Cliente.
+          Simulador fiel à aba da planilha — os pesos atribuídos são preenchidos automaticamente
+          a partir do Relato de Campo e dos Indicadores, mas podem ser ajustados manualmente.
         </p>
       </section>
 

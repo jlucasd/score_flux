@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Usuario, apiAuth } from './api';
+import { Perfil, Usuario, apiAuth } from './api';
 import { Campo } from './ui';
+
+const PERFIS: Perfil[] = ['ADMINISTRADOR', 'COMERCIAL', 'FINANCEIRO'];
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [novo, setNovo] = useState({ nome: '', email: '', senha: '' });
+  const [novo, setNovo] = useState({ nome: '', email: '', senha: '', perfil: 'COMERCIAL' as Perfil });
   const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(() => {
@@ -22,6 +24,7 @@ export default function UsuariosPage() {
           <tr>
             <th>Nome</th>
             <th>E-mail</th>
+            <th>Perfil</th>
             <th>Situação</th>
             <th>Criado em</th>
             <th></th>
@@ -32,6 +35,7 @@ export default function UsuariosPage() {
             <tr key={u.id}>
               <td className="col-item">{u.nome}</td>
               <td>{u.email}</td>
+              <td>{u.perfil}</td>
               <td>
                 <span className={u.ativo ? 'selo selo-ok' : 'selo'}>{u.ativo ? 'ATIVO' : 'INATIVO'}</span>
               </td>
@@ -67,14 +71,21 @@ export default function UsuariosPage() {
           <input type="password" placeholder="••••••••" value={novo.senha}
                  onChange={(e) => setNovo({ ...novo, senha: e.target.value })} />
         </Campo>
+        <Campo label="Perfil">
+          <select value={novo.perfil} onChange={(e) => setNovo({ ...novo, perfil: e.target.value as Perfil })}>
+            {PERFIS.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </Campo>
         <button
           disabled={!novo.nome.trim() || !novo.email.trim() || novo.senha.length < 6}
           onClick={() => {
             setErro(null);
             apiAuth
-              .criarUsuario({ nome: novo.nome.trim(), email: novo.email.trim(), senha: novo.senha })
+              .criarUsuario({ nome: novo.nome.trim(), email: novo.email.trim(), senha: novo.senha, perfil: novo.perfil })
               .then(() => {
-                setNovo({ nome: '', email: '', senha: '' });
+                setNovo({ nome: '', email: '', senha: '', perfil: 'COMERCIAL' });
                 carregar();
               })
               .catch((e) => setErro(e.message));

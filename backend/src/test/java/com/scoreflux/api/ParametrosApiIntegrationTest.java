@@ -69,28 +69,28 @@ class ParametrosApiIntegrationTest {
         assertThat(vazio.get("possuiErp").isNull()).isTrue();
         assertThat(vazio.get("atualizadoEm").isNull()).isTrue();
 
-        // PUT cria o relato
+        // POST cria o relato
         Map<String, Object> corpo = new HashMap<>();
         corpo.put("conceitoComercial", "Excelente");
         corpo.put("possuiErp", true);
         corpo.put("observacoes", "teste");
-        JsonNode salvo = rest.exchange("/api/clientes/" + clienteId + "/relato-campo",
-                HttpMethod.PUT, new HttpEntity<>(corpo), JsonNode.class).getBody();
+        JsonNode salvo = rest.postForObject("/api/clientes/" + clienteId + "/relatos", corpo, JsonNode.class);
         assertThat(salvo.get("conceitoComercial").asText()).isEqualTo("Excelente");
         assertThat(salvo.get("possuiErp").asBoolean()).isTrue();
         assertThat(salvo.get("observacoes").asText()).isEqualTo("teste");
         assertThat(salvo.get("atualizadoEm").isNull()).isFalse();
+        long relatoId = salvo.get("id").asLong();
 
-        // GET devolve o que foi salvo
+        // GET devolve o mais recente
         JsonNode lido = rest.getForObject("/api/clientes/" + clienteId + "/relato-campo", JsonNode.class);
         assertThat(lido.get("conceitoComercial").asText()).isEqualTo("Excelente");
         assertThat(lido.get("possuiErp").asBoolean()).isTrue();
         assertThat(lido.get("observacoes").asText()).isEqualTo("teste");
         assertThat(lido.get("clienteNome").asText()).isEqualTo("Cliente Relato");
 
-        // Segundo PUT altera (upsert — continua um registro só)
+        // PUT atualiza o relato existente
         corpo.put("conceitoComercial", "Bom");
-        JsonNode atualizado = rest.exchange("/api/clientes/" + clienteId + "/relato-campo",
+        JsonNode atualizado = rest.exchange("/api/relatos/" + relatoId,
                 HttpMethod.PUT, new HttpEntity<>(corpo), JsonNode.class).getBody();
         assertThat(atualizado.get("conceitoComercial").asText()).isEqualTo("Bom");
 

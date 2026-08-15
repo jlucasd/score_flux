@@ -13,6 +13,7 @@ const DOCUMENTACAO = [
 ];
 
 const extrairDados = (r: RelatoCampo): RelatoCampoDados => ({
+  titulo: r.titulo,
   conceitoComercial: r.conceitoComercial,
   conceitoComercialJustificativa: r.conceitoComercialJustificativa,
   tempoMercado: r.tempoMercado,
@@ -28,10 +29,23 @@ const extrairDados = (r: RelatoCampo): RelatoCampoDados => ({
   observacoes: r.observacoes,
 });
 
+const relatoVazio = (clienteId: number, clienteNome: string): RelatoCampo => ({
+  id: null, titulo: null, clienteId, clienteNome, clienteCpfCnpj: null,
+  conceitoComercial: null, conceitoComercialJustificativa: null,
+  tempoMercado: null, tempoMercadoJustificativa: null,
+  bandeira: null, bandeiraJustificativa: null,
+  possuiErp: null, possuiCobranca: null,
+  unidadesNegocio: null, unidadesNegocioJustificativa: null,
+  riscoClimatico: null, riscoClimaticoJustificativa: null,
+  observacoes: null, atualizadoEm: null,
+});
+
 export default function RelatoCampoPage() {
   const { clienteId, setClienteId } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [relato, setRelato] = useState<RelatoCampo | null>(null);
+  const [relatos, setRelatos] = useState<RelatoCampo[]>([]);
+  const [relatoAtual, setRelatoAtual] = useState<RelatoCampo | null>(null);
+  const [editando, setEditando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
 
@@ -48,27 +62,65 @@ export default function RelatoCampoPage() {
 
   useEffect(() => {
     if (clienteId === null) {
-      setRelato(null);
+      setRelatos([]);
+      setRelatoAtual(null);
+      setEditando(false);
       return;
     }
     setAviso(null);
-    apiCredito.relatoCampo(clienteId).then(setRelato).catch((e) => setErro(e.message));
+    apiCredito.listarRelatos(clienteId).then((lista) => {
+      setRelatos(lista);
+      setRelatoAtual(null);
+      setEditando(false);
+    }).catch((e) => setErro(e.message));
   }, [clienteId]);
 
+  const cliente = clientes.find((c) => c.id === clienteId);
+
+  const novoRelato = () => {
+    if (!cliente) return;
+    setRelatoAtual(relatoVazio(clienteId!, cliente.nome));
+    setEditando(true);
+  };
+
+  const abrirRelato = (r: RelatoCampo) => {
+    setRelatoAtual({ ...r });
+    setEditando(true);
+  };
+
   const mudar = (campo: keyof RelatoCampoDados, valor: string | boolean | null) => {
-    setRelato((atual) => (atual ? { ...atual, [campo]: valor } : atual));
+    setRelatoAtual((atual) => (atual ? { ...atual, [campo]: valor } : atual));
   };
 
   const salvar = () => {
-    if (!relato || clienteId === null) return;
+    if (!relatoAtual || clienteId === null) return;
     setErro(null);
-    apiCredito
-      .salvarRelatoCampo(clienteId, extrairDados(relato))
-      .then((r) => {
-        setRelato(r);
+    const dados = extrairDados(relatoAtual);
+
+    const promessa = relatoAtual.id
+      ? apiCredito.salvarRelatoCampo(relatoAtual.id, dados)
+      : apiCredito.criarRelato(clienteId, dados);
+
+    promessa
+      .then(() => {
         setAviso('Relato de campo salvo com sucesso');
+        setEditando(false);
+        setRelatoAtual(null);
+        apiCredito.listarRelatos(clienteId).then(setRelatos);
       })
       .catch((e) => setErro(e.message));
+  };
+
+  const excluir = (id: number) => {
+    setErro(null);
+    apiCredito.excluirRelato(id).then(() => {
+      setAviso('Relato excluído');
+      if (relatoAtual?.id === id) {
+        setRelatoAtual(null);
+        setEditando(false);
+      }
+      apiCredito.listarRelatos(clienteId!).then(setRelatos);
+    }).catch((e) => setErro(e.message));
   };
 
   return (
@@ -88,30 +140,83 @@ export default function RelatoCampoPage() {
               ))}
             </select>
           </Campo>
-          {relato && (
-            <>
-              <Campo label="Cliente">
-                <span className="texto-campo">{relato.clienteNome}</span>
-              </Campo>
-              <Campo label="CNPJ/CPF">
-                <span className="texto-campo">{relato.clienteCpfCnpj ?? '—'}</span>
-              </Campo>
-            </>
+          {clienteId !== null && (
+            <button onClick={novoRelato}>+ Novo relato</button>
           )}
         </div>
         <p className="dica">
-          Relato de campo estruturado da planilha — um relato por cliente, salvo por completo a cada envio.
+          Relato de campo estruturado — cada cliente pode ter múltiplos relatos.
         </p>
       </section>
 
-      {relato && (
+      {!editando && relatos.length > 0 && (
         <section className="painel">
+          <h2>Relatos de {cliente?.nome}</h2>
+          <table>
+            <thead>
+              <tr>
+                <th className="col-item">Título</th>
+                <th>Conceito</th>
+                <th>Atualizado em</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {relatos.map((r) => (
+                <tr key={r.id}>
+                  <td className="col-item">
+                    <a href="#" onClick={(e) => { e.preventDefault(); abrirRelato(r); }}>
+                      {r.titulo || `Relato #${r.id}`}
+                    </a>
+                  </td>
+                  <td>{r.conceitoComercial ?? '—'}</td>
+                  <td>
+                    {r.atualizadoEm
+                      ? new Date(r.atualizadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                      : '—'}
+                  </td>
+                  <td>
+                    <button className="botao-excluir" title="Excluir relato"
+                      onClick={() => excluir(r.id!)}>×</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {!editando && relatos.length === 0 && clienteId !== null && (
+        <section className="painel">
+          <p className="dica">Nenhum relato cadastrado para este cliente. Clique em "+ Novo relato" para começar.</p>
+        </section>
+      )}
+
+      {editando && relatoAtual && (
+        <section className="painel">
+          <div className="linha-form">
+            <button className="botao-secundario" onClick={() => { setEditando(false); setRelatoAtual(null); }}>
+              Voltar à lista
+            </button>
+            <h2 style={{ margin: 0 }}>{relatoAtual.id ? 'Editar relato' : 'Novo relato'}</h2>
+          </div>
+
+          <div className="linha-form" style={{ marginTop: '1rem' }}>
+            <Campo label="Título do relato">
+              <input
+                placeholder="Ex: Visita jan/2025"
+                value={relatoAtual.titulo ?? ''}
+                onChange={(e) => mudar('titulo', e.target.value || null)}
+              />
+            </Campo>
+          </div>
+
           <Pergunta
             titulo="1.1 Conceito Comercial"
             guia="Em sua avaliação, baseado em informações e percepções colhidas a campo, que conceito comercial goza o cliente em seu âmbito de atuação. Justifique sua avaliação."
             opcoes={['Excelente', 'Bom', 'Regular', 'Sem informações']}
-            valor={relato.conceitoComercial}
-            justificativa={relato.conceitoComercialJustificativa}
+            valor={relatoAtual.conceitoComercial}
+            justificativa={relatoAtual.conceitoComercialJustificativa}
             onValor={(v) => mudar('conceitoComercial', v)}
             onJustificativa={(v) => mudar('conceitoComercialJustificativa', v)}
           />
@@ -120,8 +225,8 @@ export default function RelatoCampoPage() {
             titulo="2.3 Tempo de Mercado"
             guia="A data de abertura da empresa, que poderá ser verificada no cartão do CNPJ ou contrato social, por vezes não representa a data inicial da empresa no mercado, podendo ser fruto de uma sucessão de negócios no mesmo ramo de atividade. Sendo esse o caso, justifique seu apontamento de período superior ao constante dos atos formais do cliente."
             opcoes={['Acima de 10 anos', 'De 6 a 10 anos', 'De 4 a 5 anos', 'De 0 a 3 anos']}
-            valor={relato.tempoMercado}
-            justificativa={relato.tempoMercadoJustificativa}
+            valor={relatoAtual.tempoMercado}
+            justificativa={relatoAtual.tempoMercadoJustificativa}
             onValor={(v) => mudar('tempoMercado', v)}
             onJustificativa={(v) => mudar('tempoMercadoJustificativa', v)}
           />
@@ -130,8 +235,8 @@ export default function RelatoCampoPage() {
             titulo="4.1 Principal Fornecedor (Bandeira)"
             guia="O cliente é fornecedor exclusivo de algum produto/marca com destaque no mercado? Representa alguma bandeira? Se sim, classifique-a como de 1º ou 2º nível. Aponte a situação apurada."
             opcoes={['1º Nível', '2º Nível', 'Não Possui']}
-            valor={relato.bandeira}
-            justificativa={relato.bandeiraJustificativa}
+            valor={relatoAtual.bandeira}
+            justificativa={relatoAtual.bandeiraJustificativa}
             onValor={(v) => mudar('bandeira', v)}
             onJustificativa={(v) => mudar('bandeiraJustificativa', v)}
           />
@@ -142,13 +247,13 @@ export default function RelatoCampoPage() {
             <div className="par-radios">
               <div className="campo">
                 <span>ERP</span>
-                <RadiosSimNao nome="possui-erp" valor={relato.possuiErp} onChange={(v) => mudar('possuiErp', v)} />
+                <RadiosSimNao nome="possui-erp" valor={relatoAtual.possuiErp} onChange={(v) => mudar('possuiErp', v)} />
               </div>
               <div className="campo">
                 <span>Cobrança</span>
                 <RadiosSimNao
                   nome="possui-cobranca"
-                  valor={relato.possuiCobranca}
+                  valor={relatoAtual.possuiCobranca}
                   onChange={(v) => mudar('possuiCobranca', v)}
                 />
               </div>
@@ -159,8 +264,8 @@ export default function RelatoCampoPage() {
             titulo="4.3 Número de Unidades de Negócio"
             guia="O cliente possui filiais ou pertence a algum grupo econômico que podem ser consideradas unidades de negócios? Justifique sua resposta."
             opcoes={['Mais de 12', 'De 7 a 12', 'De 4 a 6', 'De 1 a 3']}
-            valor={relato.unidadesNegocio}
-            justificativa={relato.unidadesNegocioJustificativa}
+            valor={relatoAtual.unidadesNegocio}
+            justificativa={relatoAtual.unidadesNegocioJustificativa}
             onValor={(v) => mudar('unidadesNegocio', v)}
             onJustificativa={(v) => mudar('unidadesNegocioJustificativa', v)}
           />
@@ -169,8 +274,8 @@ export default function RelatoCampoPage() {
             titulo="4.4 Risco Produtivo e Climático da Região"
             guia="Baseado em informações de mercado, como você avalia o Risco Produtivo e Climático da Região de atuação do cliente. Justifique sua resposta."
             opcoes={['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto']}
-            valor={relato.riscoClimatico}
-            justificativa={relato.riscoClimaticoJustificativa}
+            valor={relatoAtual.riscoClimatico}
+            justificativa={relatoAtual.riscoClimaticoJustificativa}
             onValor={(v) => mudar('riscoClimatico', v)}
             onJustificativa={(v) => mudar('riscoClimaticoJustificativa', v)}
           />
@@ -180,17 +285,17 @@ export default function RelatoCampoPage() {
             <textarea
               rows={3}
               placeholder="Observações gerais do relato de campo"
-              value={relato.observacoes ?? ''}
+              value={relatoAtual.observacoes ?? ''}
               onChange={(e) => mudar('observacoes', e.target.value || null)}
             />
           </div>
 
           <div className="linha-form">
             <button onClick={salvar}>Salvar relato</button>
-            {relato.atualizadoEm && (
+            {relatoAtual.atualizadoEm && (
               <span className="dica">
                 Última atualização:{' '}
-                {new Date(relato.atualizadoEm).toLocaleString('pt-BR', {
+                {new Date(relatoAtual.atualizadoEm).toLocaleString('pt-BR', {
                   dateStyle: 'short',
                   timeStyle: 'short',
                 })}

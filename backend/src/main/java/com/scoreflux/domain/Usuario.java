@@ -24,6 +24,9 @@ public class Usuario {
     @Column(name = "senha_hash", nullable = false, length = 100)
     private String senhaHash;
 
+    @Column(nullable = false, length = 20)
+    private String perfil = "ADMINISTRADOR";
+
     @Column(nullable = false)
     private boolean ativo = true;
 
@@ -44,4 +47,6 @@ public class Usuario {
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
     public LocalDateTime getCriadoEm() { return criadoEm; }
     public void setCriadoEm(LocalDateTime criadoEm) { this.criadoEm = criadoEm; }
+    public String getPerfil() { return perfil; }
+    public void setPerfil(String perfil) { this.perfil = perfil; }
 }
