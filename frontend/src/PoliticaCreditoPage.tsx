@@ -117,7 +117,7 @@ export default function PoliticaCreditoPage() {
       for (const sub of politica.subcriterios) {
         const match = encontrarOpcao(sub, relato, indicadores, politica.inflacaoReferencia);
         if (match) {
-          for (const op of sub.opcoes) novoAtribuido[op.id] = op.id === match.id ? 100 : 0;
+          for (const op of sub.opcoes) novoAtribuido[op.id] = op.id === match.id ? op.nota : 0;
         }
       }
       setAtribuidos(novoAtribuido);

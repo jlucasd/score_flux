@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { apiAuth, setSessao } from './api';
 
 export default function LoginPage(props: { onLogin: () => void }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('sf_email') ?? '');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [lembrar, setLembrar] = useState(() => !!localStorage.getItem('sf_email'));
   const [erro, setErro] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
@@ -14,7 +15,12 @@ export default function LoginPage(props: { onLogin: () => void }) {
     setErro(null);
     setCarregando(true);
     try {
-      const sessao = await apiAuth.login(email.trim(), senha);
+      const sessao = await apiAuth.login(email.trim(), senha, lembrar);
+      if (lembrar) {
+        localStorage.setItem('sf_email', email.trim());
+      } else {
+        localStorage.removeItem('sf_email');
+      }
       setSessao(sessao.token, sessao.nome);
       props.onLogin();
     } catch (e) {
@@ -125,6 +131,14 @@ export default function LoginPage(props: { onLogin: () => void }) {
               )}
             </button>
           </div>
+        </label>
+        <label className="lembrar-me">
+          <input
+            type="checkbox"
+            checked={lembrar}
+            onChange={(e) => setLembrar(e.target.checked)}
+          />
+          Lembrar de mim
         </label>
         <button disabled={!email.trim() || !senha || carregando} onClick={entrar}>
           {carregando ? 'Entrando…' : 'Entrar'}

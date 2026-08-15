@@ -17,7 +17,8 @@ import java.util.Date;
 public class JwtService {
 
     private final SecretKey chave;
-    private final Duration validade = Duration.ofHours(12);
+    private final Duration validadePadrao = Duration.ofHours(12);
+    private final Duration validadeLembrar = Duration.ofDays(30);
 
     public JwtService(@Value("${scoreflux.jwt.secret:scoreflux-dev-secret-trocar-em-producao-0123456789}") String segredo) {
         // Deriva uma chave de 512 bits via SHA-512, para qualquer segredo funcionar com HS384/512
@@ -34,11 +35,16 @@ public class JwtService {
     }
 
     public String gerarToken(String email) {
+        return gerarToken(email, false);
+    }
+
+    public String gerarToken(String email, boolean lembrar) {
         Date agora = new Date();
+        Duration dur = lembrar ? validadeLembrar : validadePadrao;
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(agora)
-                .expiration(new Date(agora.getTime() + validade.toMillis()))
+                .expiration(new Date(agora.getTime() + dur.toMillis()))
                 .signWith(chave)
                 .compact();
     }

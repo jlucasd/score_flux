@@ -1,14 +1,16 @@
 -- V8: Relato de campo múltiplo, perfil de usuário, campos extras no demonstrativo
 --
--- Idempotente: funciona em DB limpo (H2 testes) e no estado parcial do Neon
--- (onde cliente_id já foi dropado e cliente_id_new existe com dados).
--- FlywayRepairConfig.repair() limpa migração com falha antes de re-executar.
+-- Idempotente: funciona em DB limpo (H2 testes) e no Neon (onde a V8 anterior
+-- falhou e PostgreSQL fez rollback transacional — estado é pré-V8).
+-- FlywayRepairConfig.repair() limpa a entrada FAILED antes de re-executar.
 
 -- 1) Relato de campo: remover UNIQUE de cliente_id (permitir múltiplos por cliente)
 ALTER TABLE relato_campo ADD COLUMN IF NOT EXISTS cliente_id_new BIGINT;
+UPDATE relato_campo SET cliente_id_new = cliente_id WHERE cliente_id_new IS NULL;
 ALTER TABLE relato_campo DROP COLUMN IF EXISTS cliente_id;
 ALTER TABLE relato_campo DROP COLUMN IF EXISTS cliente_id_tmp;
 ALTER TABLE relato_campo RENAME COLUMN cliente_id_new TO cliente_id;
+DELETE FROM relato_campo WHERE cliente_id IS NULL;
 ALTER TABLE relato_campo ALTER COLUMN cliente_id SET NOT NULL;
 ALTER TABLE relato_campo ADD FOREIGN KEY (cliente_id) REFERENCES cliente (id) ON DELETE CASCADE;
 

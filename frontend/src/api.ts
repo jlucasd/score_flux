@@ -94,10 +94,10 @@ export interface Usuario {
 }
 
 export const apiAuth = {
-  login: (email: string, senha: string) =>
+  login: (email: string, senha: string, lembrar = false) =>
     http<{ token: string; nome: string; email: string }>('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, senha }),
+      body: JSON.stringify({ email, senha, lembrar }),
     }),
   resetSenha: (email: string) =>
     http<{ mensagem: string }>('/api/auth/reset-senha', {

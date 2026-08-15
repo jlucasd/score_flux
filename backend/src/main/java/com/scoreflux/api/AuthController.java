@@ -44,7 +44,7 @@ public class AuthController {
         this.mailSender = mailSender;
     }
 
-    public record LoginRequest(@NotBlank @Email String email, @NotBlank String senha) {}
+    public record LoginRequest(@NotBlank @Email String email, @NotBlank String senha, boolean lembrar) {}
     public record LoginResponse(String token, String nome, String email) {}
 
     @PostMapping("/login")
@@ -55,7 +55,8 @@ public class AuthController {
                     .body(Map.of("erro", "E-mail ou senha inválidos"));
         }
         Usuario u = usuario.get();
-        return ResponseEntity.ok(new LoginResponse(jwtService.gerarToken(u.getEmail()), u.getNome(), u.getEmail()));
+        return ResponseEntity.ok(new LoginResponse(
+                jwtService.gerarToken(u.getEmail(), request.lembrar()), u.getNome(), u.getEmail()));
     }
 
     public record ResetRequest(@NotBlank @Email String email) {}

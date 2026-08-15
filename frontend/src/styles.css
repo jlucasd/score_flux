@@ -938,6 +938,23 @@ header {
   color: #1c6b33;
 }
 
+.lembrar-me {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #4a5a4a;
+  cursor: pointer;
+  margin: -0.25rem 0 0.25rem;
+}
+
+.lembrar-me input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #1c6b33;
+  cursor: pointer;
+}
+
 .botao-link-login {
   background: none;
   border: none;
