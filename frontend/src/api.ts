@@ -8,18 +8,21 @@ let token: string | null = localStorage.getItem('sf_token');
 
 export const getToken = () => token;
 
-export const setSessao = (novoToken: string | null, nome?: string) => {
+export const setSessao = (novoToken: string | null, nome?: string, perfil?: string) => {
   token = novoToken;
   if (novoToken) {
     localStorage.setItem('sf_token', novoToken);
     if (nome) localStorage.setItem('sf_nome', nome);
+    if (perfil) localStorage.setItem('sf_perfil', perfil);
   } else {
     localStorage.removeItem('sf_token');
     localStorage.removeItem('sf_nome');
+    localStorage.removeItem('sf_perfil');
   }
 };
 
 export const getNomeUsuario = () => localStorage.getItem('sf_nome') ?? '';
+export const getPerfil = () => localStorage.getItem('sf_perfil') ?? 'ADMINISTRADOR';
 
 export interface Plano {
   id: number;
@@ -95,7 +98,7 @@ export interface Usuario {
 
 export const apiAuth = {
   login: (email: string, senha: string, lembrar = false) =>
-    http<{ token: string; nome: string; email: string }>('/api/auth/login', {
+    http<{ token: string; nome: string; email: string; perfil: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, senha, lembrar }),
     }),

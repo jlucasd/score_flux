@@ -45,7 +45,7 @@ public class AuthController {
     }
 
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String senha, boolean lembrar) {}
-    public record LoginResponse(String token, String nome, String email) {}
+    public record LoginResponse(String token, String nome, String email, String perfil) {}
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
@@ -56,7 +56,7 @@ public class AuthController {
         }
         Usuario u = usuario.get();
         return ResponseEntity.ok(new LoginResponse(
-                jwtService.gerarToken(u.getEmail(), request.lembrar()), u.getNome(), u.getEmail()));
+                jwtService.gerarToken(u.getEmail(), request.lembrar()), u.getNome(), u.getEmail(), u.getPerfil()));
     }
 
     public record ResetRequest(@NotBlank @Email String email) {}

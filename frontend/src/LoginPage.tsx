@@ -21,7 +21,7 @@ export default function LoginPage(props: { onLogin: () => void }) {
       } else {
         localStorage.removeItem('sf_email');
       }
-      setSessao(sessao.token, sessao.nome);
+      setSessao(sessao.token, sessao.nome, sessao.perfil);
       props.onLogin();
     } catch (e) {
       setErro((e as Error).message);

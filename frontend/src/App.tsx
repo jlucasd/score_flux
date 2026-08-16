@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { apiAuth, getNomeUsuario, getToken, setSessao } from './api';
+import { apiAuth, getNomeUsuario, getPerfil, getToken, setSessao } from './api';
 import AnaliseIndicadoresPage from './AnaliseIndicadoresPage';
 import CreditoPage from './CreditoPage';
 import CarteiraPage from './CarteiraPage';
@@ -28,15 +28,16 @@ export default function App() {
 
   if (!logado) return <LoginPage onLogin={() => setLogado(true)} />;
 
+  const perfil = getPerfil();
   const abas: [Aba, string][] = [
     ['credito', 'Cadastro do Cliente'],
     ['relato', 'Relato de Campo'],
     ['politica', 'Política de Crédito'],
     ['indicadores', 'Análise de Indicadores'],
     ['ncg', 'Balanço'],
-    ['parametros', 'Parâmetros'],
+    ...(perfil === 'ADMINISTRADOR' ? [['parametros', 'Parâmetros'] as [Aba, string]] : []),
     ['carteira', 'Carteira'],
-    ['usuarios', 'Usuários'],
+    ...(perfil === 'ADMINISTRADOR' ? [['usuarios', 'Usuários'] as [Aba, string]] : []),
   ];
 
   return (
