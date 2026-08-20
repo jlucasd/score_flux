@@ -54,7 +54,7 @@ export default function LoginPage(props: { onLogin: () => void }) {
         <div className="login-overlay">
           <h1>ScoreFlux</h1>
           <p>
-            Plataforma avançada de análise de crédito e fluxo de caixa desenvolvida 
+            Plataforma avançada de análise de crédito e fluxo de caixa desenvolvida
             especificamente para o mercado do agronegócio.
           </p>
         </div>
@@ -66,11 +66,11 @@ export default function LoginPage(props: { onLogin: () => void }) {
           <div className="login-logo">
             <img src="/assets/logo.png" alt="ScoreFlux" style={{ height: 60 }} />
           </div>
-          
+
           <h2>{modoReset ? 'Recuperar senha' : 'Bem-vindo(a)!'}</h2>
           <p>
-            {modoReset 
-              ? 'Informe seu e-mail para receber uma nova senha de acesso.' 
+            {modoReset
+              ? 'Informe seu e-mail para receber uma nova senha de acesso.'
               : 'Acesse sua conta para acompanhar as análises.'}
           </p>
 
@@ -107,12 +107,12 @@ export default function LoginPage(props: { onLogin: () => void }) {
                     onClick={() => setMostrarSenha(!mostrarSenha)}
                     tabIndex={-1}
                     style={{
-                      position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+                      position: 'absolute', right: '-7.5rem', top: '40%', transform: 'translateY(-50%)',
                       background: 'none', border: 'none', color: 'var(--color-text-muted)',
                       padding: '0.25rem', boxShadow: 'none'
                     }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '2rem' }}>
                       {mostrarSenha ? 'visibility_off' : 'visibility'}
                     </span>
                   </button>
@@ -141,16 +141,16 @@ export default function LoginPage(props: { onLogin: () => void }) {
             </>
           )}
 
-          <button 
+          <button
             style={{ width: '100%', padding: '0.875rem' }}
-            disabled={modoReset ? (!email.trim() || carregando) : (!email.trim() || !senha || carregando)} 
+            disabled={modoReset ? (!email.trim() || carregando) : (!email.trim() || !senha || carregando)}
             onClick={modoReset ? resetar : entrar}
           >
             {carregando ? (modoReset ? 'Enviando…' : 'Entrando…') : (modoReset ? 'Enviar nova senha' : 'Entrar na Plataforma')}
           </button>
 
           {modoReset && (
-            <button 
+            <button
               className="botao-secundario"
               style={{ width: '100%', marginTop: '1rem', padding: '0.875rem' }}
               onClick={() => { setModoReset(false); setErro(null); setAviso(null); }}

@@ -96,7 +96,7 @@ export default function App() {
                     key={item.chave}
                     className={`nav-link ${aba === item.chave ? 'ativo' : ''}`}
                     onClick={() => { setAba(item.chave); setMenuAberto(false); }}
-                    style={{ width: '100%', border: 'none', background: aba === item.chave ? 'var(--color-primary-bg)' : 'transparent', textAlign: 'left', boxShadow: 'none' }}
+                    style={{ width: '100%', background: aba === item.chave ? 'var(--color-primary-bg)' : 'transparent', textAlign: 'left', boxShadow: 'none' }}
                   >
                     <span className={`material-symbols-outlined ${aba === item.chave ? 'filled' : ''}`}>
                       {item.icone}
@@ -246,7 +246,7 @@ function ModalAlterarSenha(props: { onFechar: () => void }) {
                     padding: '0.25rem', boxShadow: 'none'
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: '2rem' }}>
                     {mostrar ? 'visibility_off' : 'visibility'}
                   </span>
                 </button>
