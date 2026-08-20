@@ -79,7 +79,7 @@ export default function App() {
                 key={item.chave}
                 className={`nav-link ${aba === item.chave ? 'ativo' : ''}`}
                 onClick={() => { setAba(item.chave); setMenuAberto(false); }}
-                style={{ width: '100%', border: 'none', background: aba === item.chave ? 'var(--color-primary-bg)' : 'transparent', textAlign: 'left', boxShadow: 'none' }}
+                style={{ width: '100%', background: aba === item.chave ? 'var(--color-primary-bg)' : 'transparent', textAlign: 'left', boxShadow: 'none' }}
               >
                 <span className={`material-symbols-outlined ${aba === item.chave ? 'filled' : ''}`}>
                   {item.icone}
@@ -241,7 +241,7 @@ function ModalAlterarSenha(props: { onFechar: () => void }) {
                   onClick={() => setMostrar(!mostrar)}
                   tabIndex={-1}
                   style={{
-                    position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+                    position: 'absolute', right: '-7.5rem', top: '40%', transform: 'translateY(-50%)',
                     background: 'none', border: 'none', color: 'var(--color-text-muted)',
                     padding: '0.25rem', boxShadow: 'none'
                   }}
