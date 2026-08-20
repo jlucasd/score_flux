@@ -424,6 +424,7 @@ export interface PosicaoCarteira {
   saldoAberto: number;
   disponivel: number | null;
   status: string;
+  prazoCredito: string | null;
 }
 
 export interface Carteira {
@@ -447,6 +448,14 @@ export const apiCarteira = {
   adicionar: (clienteId: number, dados: { data: string; tipo: string; valor: number; descricao?: string }) =>
     http<Carteira>(`/api/carteira/clientes/${clienteId}/movimentos`, { method: 'POST', body: JSON.stringify(dados) }),
   excluirMovimento: (id: number) => http<Carteira>(`/api/carteira/movimentos/${id}`, { method: 'DELETE' }),
+  atualizarPrazo: (clienteId: number, prazo: string | null) =>
+    http<Carteira>(`/api/carteira/clientes/${clienteId}/prazo`, { method: 'PUT', body: JSON.stringify({ prazo }) }),
+};
+
+export const apiPolitica = {
+  pesosAtribuidos: (clienteId: number) => http<Record<number, number>>(`/api/clientes/${clienteId}/pesos-atribuidos`),
+  salvarPesos: (clienteId: number, itens: { opcaoId: number; valor: number }[]) =>
+    http<Record<number, number>>(`/api/clientes/${clienteId}/pesos-atribuidos`, { method: 'PUT', body: JSON.stringify(itens) }),
 };
 
 export interface ExtracaoPdf {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num, pct } from './api';
-import { Campo, InputMoeda } from './ui';
+import { Campo, InputMoeda, useMsgTemp } from './ui';
 import { useAnalise, useAutosave } from './contexto';
 
 const ajustarAgregado = (
@@ -58,8 +58,8 @@ export default function AnaliseIndicadoresPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [colunas, setColunas] = useState<Demonstrativo[]>([]);
   const [sujo, setSujo] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [aviso, setAviso] = useMsgTemp();
 
   useEffect(() => {
     apiCredito

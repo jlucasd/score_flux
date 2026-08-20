@@ -1,8 +1,11 @@
 package com.scoreflux.api;
 
 import com.scoreflux.api.dto.CarteiraDTO;
+import com.scoreflux.domain.Cliente;
 import com.scoreflux.domain.MovimentoCarteira;
+import com.scoreflux.repository.ClienteRepository;
 import com.scoreflux.service.CarteiraService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -18,10 +21,15 @@ import java.util.List;
 public class CarteiraController {
 
     private final CarteiraService service;
+    private final ClienteRepository clienteRepository;
 
-    public CarteiraController(CarteiraService service) {
+    public CarteiraController(CarteiraService service, ClienteRepository clienteRepository) {
         this.service = service;
+        this.clienteRepository = clienteRepository;
     }
+
+    public record PrazoRequest(@DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate prazo) {}
+
 
     public record MovimentoRequest(
             @NotNull @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data,
@@ -50,6 +58,15 @@ public class CarteiraController {
     @DeleteMapping("/movimentos/{id}")
     public CarteiraDTO excluir(@PathVariable Long id) {
         service.excluirMovimento(id);
+        return service.carteira();
+    }
+
+    @PutMapping("/clientes/{clienteId}/prazo")
+    public CarteiraDTO atualizarPrazo(@PathVariable Long clienteId, @RequestBody PrazoRequest r) {
+        Cliente cliente = clienteRepository.findById(clienteId)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado: " + clienteId));
+        cliente.setPrazoCredito(r.prazo());
+        clienteRepository.save(cliente);
         return service.carteira();
     }
 }

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { apiAuth, setSessao } from './api';
+import { useMsgTemp } from './ui';
 
 export default function LoginPage(props: { onLogin: () => void }) {
   const [email, setEmail] = useState(() => localStorage.getItem('sf_email') ?? '');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [lembrar, setLembrar] = useState(() => !!localStorage.getItem('sf_email'));
-  const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [aviso, setAviso] = useMsgTemp();
   const [carregando, setCarregando] = useState(false);
   const [modoReset, setModoReset] = useState(false);
 
@@ -45,108 +46,119 @@ export default function LoginPage(props: { onLogin: () => void }) {
     }
   };
 
-  if (modoReset) {
-    return (
-      <div className="tela-login">
-        <div className="cartao-login">
+  return (
+    <div className="login-container">
+      {/* Left Panel with Image */}
+      <div className="login-image-panel">
+        <img src="/assets/agro-login.jpg" alt="Agronegócio" className="login-image" />
+        <div className="login-overlay">
           <h1>ScoreFlux</h1>
-          <p className="login-saudacao">Recuperar senha</p>
-          <p className="subtitulo">
-            Informe seu e-mail de acesso. Uma nova senha será enviada para você.
+          <p>
+            Plataforma avançada de análise de crédito e fluxo de caixa desenvolvida 
+            especificamente para o mercado do agronegócio.
           </p>
+        </div>
+      </div>
+
+      {/* Right Panel with Form */}
+      <div className="login-form-panel">
+        <div className="login-form-wrapper">
+          <div className="login-logo">
+            <img src="/assets/logo.png" alt="ScoreFlux" style={{ height: 60 }} />
+          </div>
+          
+          <h2>{modoReset ? 'Recuperar senha' : 'Bem-vindo(a)!'}</h2>
+          <p>
+            {modoReset 
+              ? 'Informe seu e-mail para receber uma nova senha de acesso.' 
+              : 'Acesse sua conta para acompanhar as análises.'}
+          </p>
+
           {erro && <div className="erro">{erro}</div>}
           {aviso && <div className="aviso">{aviso}</div>}
-          <label>
-            E-mail
+
+          <div className="campo" style={{ marginBottom: '1.25rem' }}>
+            <label>E-mail</label>
             <input
               type="email"
               value={email}
               autoFocus
               onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && resetar()}
+              onKeyDown={(e) => e.key === 'Enter' && (modoReset ? resetar() : entrar())}
               placeholder="voce@empresa.com"
             />
-          </label>
-          <button disabled={!email.trim() || carregando} onClick={resetar}>
-            {carregando ? 'Enviando…' : 'Enviar nova senha'}
-          </button>
-          <button className="botao-link-login" onClick={() => { setModoReset(false); setErro(null); setAviso(null); }}>
-            Voltar ao login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="tela-login">
-      <div className="cartao-login">
-        <h1>ScoreFlux</h1>
-        <p className="login-saudacao">Bem-vindo(a)!</p>
-        <p className="subtitulo">
-          Acesse sua conta para acompanhar a análise de crédito e o fluxo de caixa.
-        </p>
-        {erro && <div className="erro">{erro}</div>}
-        {aviso && <div className="aviso">{aviso}</div>}
-        <label>
-          E-mail
-          <input
-            type="email"
-            value={email}
-            autoFocus
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && entrar()}
-            placeholder="voce@empresa.com"
-          />
-        </label>
-        <label>
-          Senha
-          <div className="campo-senha">
-            <input
-              type={mostrarSenha ? 'text' : 'password'}
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && entrar()}
-              placeholder="••••••••"
-            />
-            <button
-              type="button"
-              className="botao-olho"
-              onClick={() => setMostrarSenha(!mostrarSenha)}
-              title={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
-              tabIndex={-1}
-            >
-              {mostrarSenha ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                  <line x1="1" y1="1" x2="23" y2="23"/>
-                  <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
-                </svg>
-              ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              )}
-            </button>
           </div>
-        </label>
-        <label className="lembrar-me">
-          <input
-            type="checkbox"
-            checked={lembrar}
-            onChange={(e) => setLembrar(e.target.checked)}
-          />
-          Lembrar de mim
-        </label>
-        <button disabled={!email.trim() || !senha || carregando} onClick={entrar}>
-          {carregando ? 'Entrando…' : 'Entrar'}
-        </button>
-        <button className="botao-link-login" onClick={() => { setModoReset(true); setErro(null); setAviso(null); }}>
-          Esqueci minha senha
-        </button>
-        <p className="login-tagline">Crédito seguro, decisões inteligentes.</p>
+
+          {!modoReset && (
+            <>
+              <div className="campo" style={{ marginBottom: '1.25rem' }}>
+                <label>Senha</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && entrar()}
+                    placeholder="••••••••"
+                    style={{ paddingRight: '2.5rem' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    tabIndex={-1}
+                    style={{
+                      position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: 'var(--color-text-muted)',
+                      padding: '0.25rem', boxShadow: 'none'
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>
+                      {mostrarSenha ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <input
+                    type="checkbox"
+                    checked={lembrar}
+                    onChange={(e) => setLembrar(e.target.checked)}
+                    style={{ width: 'auto', height: 'auto', accentColor: 'var(--color-primary)' }}
+                  />
+                  Lembrar de mim
+                </label>
+
+                <button
+                  className="botao-link"
+                  onClick={() => { setModoReset(true); setErro(null); setAviso(null); }}
+                  style={{ fontSize: '0.875rem' }}
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            </>
+          )}
+
+          <button 
+            style={{ width: '100%', padding: '0.875rem' }}
+            disabled={modoReset ? (!email.trim() || carregando) : (!email.trim() || !senha || carregando)} 
+            onClick={modoReset ? resetar : entrar}
+          >
+            {carregando ? (modoReset ? 'Enviando…' : 'Entrando…') : (modoReset ? 'Enviar nova senha' : 'Entrar na Plataforma')}
+          </button>
+
+          {modoReset && (
+            <button 
+              className="botao-secundario"
+              style={{ width: '100%', marginTop: '1rem', padding: '0.875rem' }}
+              onClick={() => { setModoReset(false); setErro(null); setAviso(null); }}
+            >
+              Voltar ao login
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

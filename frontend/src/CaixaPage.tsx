@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Extrato, apiCaixa, brl } from './api';
-import { Campo } from './ui';
+import { Campo, useMsgTemp } from './ui';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 export default function CaixaPage() {
   const [filtro, setFiltro] = useState('');
   const [extrato, setExtrato] = useState<Extrato | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
   const [novo, setNovo] = useState({
     data: hoje(),
     classificacao: '',
@@ -131,7 +131,7 @@ export default function CaixaPage() {
 
         <div className="linha-form">
           <Campo label="Data">
-            <input type="date" value={novo.data} onChange={(e) => setNovo({ ...novo, data: e.target.value })} />
+            <input className="campo-curto" type="date" value={novo.data} onChange={(e) => setNovo({ ...novo, data: e.target.value })} />
           </Campo>
           <Campo label="Classificação">
             <input
@@ -150,7 +150,7 @@ export default function CaixaPage() {
             />
           </Campo>
           <Campo label="Tipo">
-            <select value={novo.tipo} onChange={(e) => setNovo({ ...novo, tipo: e.target.value })}>
+            <select className="campo-curto" value={novo.tipo} onChange={(e) => setNovo({ ...novo, tipo: e.target.value })}>
               <option value="entrada">Entrada</option>
               <option value="saida">Saída</option>
             </select>
@@ -158,13 +158,13 @@ export default function CaixaPage() {
           <Campo label="Valor (R$)">
             <input
               placeholder="0,00"
-              className="campo-ano"
+              className="campo-curto"
               value={novo.valor}
               onChange={(e) => setNovo({ ...novo, valor: e.target.value })}
             />
           </Campo>
           <Campo label="Situação">
-            <select value={novo.status} onChange={(e) => setNovo({ ...novo, status: e.target.value })}>
+            <select className="campo-medio" value={novo.status} onChange={(e) => setNovo({ ...novo, status: e.target.value })}>
               <option value="REALIZADO">Realizado</option>
               <option value="PREVISTO">Previsto</option>
             </select>

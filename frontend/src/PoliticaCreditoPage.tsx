@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
   Cliente, Demonstrativo, Faixa, Indicadores, OpcaoPolitica, Politica, RelatoCampo,
-  SubcriterioPolitica, apiCredito, brl, num, pct,
+  SubcriterioPolitica, apiCredito, apiPolitica, brl, num, pct,
 } from './api';
-import { Campo } from './ui';
+import { Campo, useMsgTemp } from './ui';
 import { useAnalise } from './contexto';
 
 /** Peso em porcentagem: 0,10 → 10% · 0,025 → 2,5% · 1,00 → 100%. */
@@ -76,7 +76,8 @@ export default function PoliticaCreditoPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [ultimoDemo, setUltimoDemo] = useState<Demonstrativo | null>(null);
   const [atribuidos, setAtribuidos] = useState<Record<number, number>>({});
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [sucesso, setSucesso] = useMsgTemp();
 
   useEffect(() => {
     apiCredito.politica().then(setPolitica).catch((e) => setErro(e.message));
@@ -112,20 +113,34 @@ export default function PoliticaCreditoPage() {
     Promise.all([
       apiCredito.relatoCampo(clienteId).catch(() => null),
       apiCredito.indicadores(clienteId).catch(() => null),
-    ]).then(([relato, indicadores]: [RelatoCampo | null, Indicadores | null]) => {
+      apiPolitica.pesosAtribuidos(clienteId).catch(() => ({} as Record<number, number>)),
+    ]).then(([relato, indicadores, salvos]: [RelatoCampo | null, Indicadores | null, Record<number, number>]) => {
       for (const sub of politica.subcriterios) {
         const match = encontrarOpcao(sub, relato, indicadores, politica.inflacaoReferencia);
         if (match) {
           for (const op of sub.opcoes) novoAtribuido[op.id] = op.id === match.id ? op.nota : 0;
         }
       }
-      setAtribuidos(novoAtribuido);
+      const merged = { ...novoAtribuido, ...salvos };
+      setAtribuidos(merged);
     });
   }, [clienteId, politica]);
 
   /** Fórmula da planilha: pesoCliente = Σ opções (peso do subcritério × pesoAtribuído / 100). */
   const pesoCliente = (sub: SubcriterioPolitica) =>
     sub.opcoes.reduce((t, op) => t + sub.peso * ((atribuidos[op.id] ?? 0) / 100), 0);
+
+  const salvarPesos = () => {
+    if (clienteId === null) return;
+    setErro(null);
+    const itens = Object.entries(atribuidos)
+      .filter(([, v]) => v > 0)
+      .map(([opcaoId, valor]) => ({ opcaoId: Number(opcaoId), valor }));
+    apiPolitica
+      .salvarPesos(clienteId, itens)
+      .then((salvos) => { setAtribuidos((atual) => ({ ...atual, ...salvos })); setSucesso('Pesos atribuídos salvos com sucesso'); })
+      .catch((e) => setErro(e.message));
+  };
 
   if (!politica) return <>{erro && <div className="erro">{erro}</div>}</>;
 
@@ -147,7 +162,8 @@ export default function PoliticaCreditoPage() {
 
   return (
     <>
-      {erro && <div className="erro">{erro}</div>}
+      {erro && <div className="erro">{erro}<button className="fechar-msg" onClick={() => setErro(null)}>×</button></div>}
+      {sucesso && <div className="aviso">{sucesso}<button className="fechar-msg" onClick={() => setSucesso(null)}>×</button></div>}
 
       <section className="painel">
         <div className="linha-form">
@@ -293,6 +309,13 @@ export default function PoliticaCreditoPage() {
             <div className="cartao-titulo">Limite de Crédito</div>
             <div className="cartao-valor">{limite !== null ? brl(limite) : '—'}</div>
           </div>
+        </div>
+      </section>
+
+      <section className="painel">
+        <div className="cabecalho-secao">
+          <span></span>
+          <button disabled={clienteId === null} onClick={salvarPesos}>Salvar pesos atribuídos</button>
         </div>
       </section>
     </>

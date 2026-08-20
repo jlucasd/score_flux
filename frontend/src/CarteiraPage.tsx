@@ -1,12 +1,14 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Carteira, MovimentoCarteira, PosicaoCarteira, apiCarteira, brl } from './api';
-import { Campo } from './ui';
+import { Campo, ConfirmationModal, useMsgTemp } from './ui';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 
 export default function CarteiraPage() {
   const [carteira, setCarteira] = useState<Carteira | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [sucesso, setSucesso] = useMsgTemp();
+  const [avisoExclusao, setAvisoExclusao] = useMsgTemp();
   const [expandido, setExpandido] = useState<number | null>(null);
 
   const carregar = useCallback(() => {
@@ -21,9 +23,18 @@ export default function CarteiraPage() {
     return 'selo';
   };
 
+  const salvarPrazo = (clienteId: number, prazo: string) => {
+    apiCarteira
+      .atualizarPrazo(clienteId, prazo || null)
+      .then((c) => { setCarteira(c); setSucesso('Prazo atualizado com sucesso'); })
+      .catch((e) => setErro(e.message));
+  };
+
   return (
     <>
-      {erro && <div className="erro">{erro}</div>}
+      {erro && <div className="erro">{erro}<button className="fechar-msg" onClick={() => setErro(null)}>×</button></div>}
+      {sucesso && <div className="aviso">{sucesso}<button className="fechar-msg" onClick={() => setSucesso(null)}>×</button></div>}
+      {avisoExclusao && <div className="aviso-exclusao">{avisoExclusao}<button className="fechar-msg" onClick={() => setAvisoExclusao(null)}>×</button></div>}
 
       <section className="painel">
         <h2>Carteira de crédito</h2>
@@ -47,6 +58,7 @@ export default function CarteiraPage() {
                   <th>Limite aprovado</th>
                   <th>Saldo em aberto</th>
                   <th>Disponível</th>
+                  <th>Prazo</th>
                   <th>Status</th>
                   <th></th>
                 </tr>
@@ -63,6 +75,16 @@ export default function CarteiraPage() {
                         {p.disponivel !== null ? brl(p.disponivel) : '—'}
                       </td>
                       <td>
+                        <input
+                          type="date"
+                          className="campo-curto"
+                          value={p.prazoCredito ?? ''}
+                          onChange={(e) => salvarPrazo(p.clienteId, e.target.value)}
+                          title="Prazo para o saldo do cliente"
+                          style={{ fontSize: '0.8125rem' }}
+                        />
+                      </td>
+                      <td>
                         <span className={selo(p.status)}>{p.status}</span>
                       </td>
                       <td className="celula-acao">
@@ -73,8 +95,8 @@ export default function CarteiraPage() {
                     </tr>
                     {expandido === p.clienteId && (
                       <tr>
-                        <td colSpan={7} className="celula-movimentos">
-                          <Movimentos posicao={p} onMudou={carregar} onErro={setErro} />
+                        <td colSpan={8} className="celula-movimentos">
+                          <Movimentos posicao={p} onMudou={carregar} onErro={setErro} onSucesso={setSucesso} onExclusao={setAvisoExclusao} />
                         </td>
                       </tr>
                     )}
@@ -82,7 +104,7 @@ export default function CarteiraPage() {
                 ))}
                 {carteira.posicoes.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="vazio">
+                    <td colSpan={8} className="vazio">
                       Nenhum cliente cadastrado — cadastre em "Cadastro do Cliente"
                     </td>
                   </tr>
@@ -101,9 +123,10 @@ export default function CarteiraPage() {
   );
 }
 
-function Movimentos(props: { posicao: PosicaoCarteira; onMudou: () => void; onErro: (m: string) => void }) {
+function Movimentos(props: { posicao: PosicaoCarteira; onMudou: () => void; onErro: (m: string) => void; onSucesso: (m: string) => void; onExclusao: (m: string) => void }) {
   const [movimentos, setMovimentos] = useState<MovimentoCarteira[]>([]);
   const [novo, setNovo] = useState({ data: hoje(), tipo: 'FATURAMENTO', valor: '', descricao: '' });
+  const [movParaExcluir, setMovParaExcluir] = useState<MovimentoCarteira | null>(null);
 
   const carregar = useCallback(() => {
     apiCarteira.movimentos(props.posicao.clienteId).then(setMovimentos).catch((e) => props.onErro(e.message));
@@ -128,6 +151,7 @@ function Movimentos(props: { posicao: PosicaoCarteira; onMudou: () => void; onEr
         setNovo({ ...novo, valor: '', descricao: '' });
         carregar();
         props.onMudou();
+        props.onSucesso('Movimento lançado com sucesso');
       })
       .catch((e) => props.onErro(e.message));
   };
@@ -157,15 +181,7 @@ function Movimentos(props: { posicao: PosicaoCarteira; onMudou: () => void; onEr
                 <button
                   className="botao-excluir"
                   title="Excluir movimento"
-                  onClick={() =>
-                    apiCarteira
-                      .excluirMovimento(m.id)
-                      .then(() => {
-                        carregar();
-                        props.onMudou();
-                      })
-                      .catch((e) => props.onErro(e.message))
-                  }
+                  onClick={() => setMovParaExcluir(m)}
                 >
                   ×
                 </button>
@@ -181,12 +197,25 @@ function Movimentos(props: { posicao: PosicaoCarteira; onMudou: () => void; onEr
           )}
         </tbody>
       </table>
+      <ConfirmationModal
+        isOpen={!!movParaExcluir}
+        onClose={() => setMovParaExcluir(null)}
+        onConfirm={() => {
+          if (movParaExcluir) {
+            const id = movParaExcluir.id;
+            setMovParaExcluir(null);
+            apiCarteira.excluirMovimento(id).then(() => { carregar(); props.onMudou(); props.onExclusao('Movimento excluído com sucesso'); }).catch((e) => props.onErro(e.message));
+          }
+        }}
+        title="Excluir movimento"
+        message={`Tem certeza que deseja excluir o movimento de ${movParaExcluir ? brl(movParaExcluir.valor) : ''}? Esta ação não pode ser desfeita.`}
+      />
       <div className="linha-form">
         <Campo label="Data">
-          <input type="date" value={novo.data} onChange={(e) => setNovo({ ...novo, data: e.target.value })} />
+          <input className="campo-curto" type="date" value={novo.data} onChange={(e) => setNovo({ ...novo, data: e.target.value })} />
         </Campo>
         <Campo label="Tipo de movimento">
-          <select value={novo.tipo} onChange={(e) => setNovo({ ...novo, tipo: e.target.value })}>
+          <select className="campo-medio" value={novo.tipo} onChange={(e) => setNovo({ ...novo, tipo: e.target.value })}>
             <option value="FATURAMENTO">Faturamento (aumenta saldo)</option>
             <option value="PAGAMENTO">Pagamento (reduz saldo)</option>
           </select>
@@ -194,7 +223,7 @@ function Movimentos(props: { posicao: PosicaoCarteira; onMudou: () => void; onEr
         <Campo label="Valor (R$)">
           <input
             placeholder="0,00"
-            className="campo-ano"
+            className="campo-curto"
             value={novo.valor}
             onChange={(e) => setNovo({ ...novo, valor: e.target.value })}
           />

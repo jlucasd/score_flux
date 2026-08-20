@@ -3,7 +3,7 @@ import {
   AnaliseDetalhe, AnaliseResumo, Cliente, Demonstrativo, Indicadores, Politica,
   apiCredito, baixarParecer, brl, num, pct, UFS,
 } from './api';
-import { Campo, InputMoeda } from './ui';
+import { Campo, ConfirmationModal, InputMoeda, useMsgTemp } from './ui';
 import { useAnalise } from './contexto';
 
 const CAMPOS_DEMONSTRATIVO: { chave: keyof Demonstrativo; rotulo: string; grupo: string }[] = [
@@ -37,7 +37,9 @@ export default function CreditoPage() {
   const { clienteId, setClienteId } = useAnalise();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [politica, setPolitica] = useState<Politica | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [sucesso, setSucesso] = useMsgTemp();
+  const [avisoExclusao, setAvisoExclusao] = useMsgTemp();
 
   const carregarClientes = useCallback(async () => {
     setClientes(await apiCredito.listarClientes());
@@ -57,24 +59,28 @@ export default function CreditoPage() {
 
   return (
     <>
-      {erro && <div className="erro">{erro}</div>}
+      {erro && <div className="erro">{erro}<button className="fechar-msg" onClick={() => setErro(null)}>×</button></div>}
+      {sucesso && <div className="aviso">{sucesso}<button className="fechar-msg" onClick={() => setSucesso(null)}>×</button></div>}
+      {avisoExclusao && <div className="aviso-exclusao">{avisoExclusao}<button className="fechar-msg" onClick={() => setAvisoExclusao(null)}>×</button></div>}
       <ClientesPainel
         clientes={clientes}
         clienteId={clienteId}
         onSelecionar={setClienteId}
-        onSalvo={async (c) => {
+        onSalvo={async (c, editou) => {
           await carregarClientes();
           setClienteId(c.id);
+          setSucesso(editou ? 'Cliente atualizado com sucesso' : 'Cliente cadastrado com sucesso');
         }}
         onExcluido={async () => {
           const lista = await apiCredito.listarClientes();
           setClientes(lista);
           setClienteId(lista.length > 0 ? lista[0].id : null);
+          setAvisoExclusao('Cliente excluído com sucesso');
         }}
         onErro={setErro}
       />
       {cliente && politica && (
-        <ClienteDetalhe key={cliente.id} cliente={cliente} politica={politica} onErro={setErro} />
+        <ClienteDetalhe key={cliente.id} cliente={cliente} politica={politica} onErro={setErro} onSucesso={setSucesso} onExclusao={setAvisoExclusao} />
       )}
     </>
   );
@@ -108,7 +114,7 @@ function ClientesPainel(props: {
   clientes: Cliente[];
   clienteId: number | null;
   onSelecionar: (id: number) => void;
-  onSalvo: (c: Cliente) => void;
+  onSalvo: (c: Cliente, editou: boolean) => void;
   onExcluido: () => void;
   onErro: (m: string) => void;
 }) {
@@ -152,14 +158,15 @@ function ClientesPainel(props: {
   });
 
   const salvar = () => {
-    const req = modo === 'editando' && clienteSel
-      ? apiCredito.atualizarCliente(clienteSel.id, dados())
+    const estaEditando = modo === 'editando' && !!clienteSel;
+    const req = estaEditando
+      ? apiCredito.atualizarCliente(clienteSel!.id, dados())
       : apiCredito.criarCliente(dados());
     req
       .then((c) => {
         setForm(FORM_CLIENTE_VAZIO);
         setModo('novo');
-        props.onSalvo(c);
+        props.onSalvo(c, estaEditando);
       })
       .catch((e) => props.onErro(e.message));
   };
@@ -197,22 +204,20 @@ function ClientesPainel(props: {
         </div>
       </div>
 
-      {confirmando && clienteSel && (
-        <div className="confirmacao">
-          <span>Tem certeza que gostaria de excluir <strong>{clienteSel.nome}</strong>?</span>
-          <span className="confirmacao-acoes">
-            <button className="botao-perigo" onClick={excluir}>Sim, excluir</button>
-            <button className="botao-secundario" onClick={() => setConfirmando(false)}>Cancelar</button>
-          </span>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={confirmando && !!clienteSel}
+        onClose={() => setConfirmando(false)}
+        onConfirm={() => { setConfirmando(false); excluir(); }}
+        title="Excluir cliente"
+        message={`Tem certeza que deseja excluir "${clienteSel?.nome}"? Todos os dados vinculados (demonstrativos, análises, relatos, movimentos) serão removidos. Esta ação não pode ser desfeita.`}
+      />
 
       <h3 className="titulo-form">
         {editando ? `Alterar cadastro — ${clienteSel?.nome ?? ''}` : 'Novo cadastro de cliente'}
       </h3>
       <div className="linha-form">
-        <Campo label="Nome / Razão Social *" largo>
-          <input placeholder="Nome completo ou razão social" value={form.nome}
+        <Campo label="Nome / Razão Social *">
+          <input className="campo-largo" placeholder="Nome completo ou razão social" value={form.nome}
                  onChange={(e) => setForm({ ...form, nome: e.target.value })} />
         </Campo>
         <Campo label="CPF/CNPJ">
@@ -236,7 +241,7 @@ function ClientesPainel(props: {
           </div>
         </Campo>
         <Campo label="Tipo">
-          <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+          <select className="campo-medio" value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
             <option value="PRODUTOR">Produtor</option>
             <option value="REVENDA">Revenda</option>
             <option value="COOPERATIVA">Cooperativa</option>
@@ -253,12 +258,12 @@ function ClientesPainel(props: {
         </Campo>
       </div>
       <div className="linha-form">
-        <Campo label="Endereço" largo>
-          <input placeholder="Logradouro (rua, avenida...)" className="campo-endereco" value={form.endereco}
+        <Campo label="Endereço">
+          <input className="campo-extralargo" placeholder="Logradouro (rua, avenida...)" value={form.endereco}
                  onChange={(e) => setForm({ ...form, endereco: e.target.value })} />
         </Campo>
         <Campo label="Número">
-          <input placeholder="Nº / S/N" className="campo-uf" value={form.numero}
+          <input className="campo-curto" placeholder="Nº / S/N" value={form.numero}
                  onChange={(e) => setForm({ ...form, numero: e.target.value })} />
         </Campo>
         <Campo label="Bairro">
@@ -274,7 +279,7 @@ function ClientesPainel(props: {
                  onChange={(e) => setForm({ ...form, municipio: e.target.value })} />
         </Campo>
         <Campo label="UF">
-          <select className="campo-uf" value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value })}>
+          <select className="campo-curto" value={form.uf} onChange={(e) => setForm({ ...form, uf: e.target.value })}>
             <option value="">—</option>
             {UFS.map((sigla) => (
               <option key={sigla} value={sigla}>{sigla}</option>
@@ -292,7 +297,7 @@ function ClientesPainel(props: {
   );
 }
 
-function ClienteDetalhe(props: { cliente: Cliente; politica: Politica; onErro: (m: string) => void }) {
+function ClienteDetalhe(props: { cliente: Cliente; politica: Politica; onErro: (m: string) => void; onSucesso: (m: string) => void; onExclusao: (m: string) => void }) {
   const { cliente, politica, onErro } = props;
   const [indicadores, setIndicadores] = useState<Indicadores | null>(null);
   const [analises, setAnalises] = useState<AnaliseResumo[]>([]);
@@ -307,7 +312,7 @@ function ClienteDetalhe(props: { cliente: Cliente; politica: Politica; onErro: (
 
   return (
     <>
-      <DemonstrativosPainel cliente={cliente} onSalvo={recarregar} onErro={onErro} />
+      <DemonstrativosPainel cliente={cliente} onSalvo={recarregar} onErro={onErro} onSucesso={props.onSucesso} />
       {indicadores && <IndicadoresPainel indicadores={indicadores} />}
       <AnalisesPainel
         cliente={cliente}
@@ -315,6 +320,8 @@ function ClienteDetalhe(props: { cliente: Cliente; politica: Politica; onErro: (
         onAbrir={(a) => setAnaliseAberta(a)}
         onMudou={recarregar}
         onErro={onErro}
+        onSucesso={props.onSucesso}
+        onExclusao={props.onExclusao}
       />
       {analiseAberta && (
         <AnaliseEditor
@@ -327,13 +334,14 @@ function ClienteDetalhe(props: { cliente: Cliente; politica: Politica; onErro: (
           }}
           onFechar={() => setAnaliseAberta(null)}
           onErro={onErro}
+          onSucesso={props.onSucesso}
         />
       )}
     </>
   );
 }
 
-function DemonstrativosPainel(props: { cliente: Cliente; onSalvo: () => void; onErro: (m: string) => void }) {
+function DemonstrativosPainel(props: { cliente: Cliente; onSalvo: () => void; onErro: (m: string) => void; onSucesso: (m: string) => void }) {
   const anoAtual = new Date().getFullYear();
   const [colunas, setColunas] = useState<Demonstrativo[]>([
     demonstrativoVazio(anoAtual - 1),
@@ -362,7 +370,7 @@ function DemonstrativosPainel(props: { cliente: Cliente; onSalvo: () => void; on
     const d = colunas[indice];
     apiCredito
       .salvarDemonstrativo(props.cliente.id, d.exercicio, d)
-      .then(() => props.onSalvo())
+      .then(() => { props.onSalvo(); props.onSucesso(`Demonstrativo ${d.exercicio} salvo com sucesso`); })
       .catch((e) => props.onErro(e.message));
   };
 
@@ -510,7 +518,11 @@ function AnalisesPainel(props: {
   onAbrir: (a: AnaliseDetalhe) => void;
   onMudou: () => void;
   onErro: (m: string) => void;
+  onSucesso: (m: string) => void;
+  onExclusao: (m: string) => void;
 }) {
+  const [analiseParaExcluir, setAnaliseParaExcluir] = useState<AnaliseResumo | null>(null);
+
   return (
     <section className="painel">
       <div className="cabecalho-secao">
@@ -559,9 +571,7 @@ function AnalisesPainel(props: {
                 <button
                   className="botao-excluir"
                   title="Excluir análise"
-                  onClick={() =>
-                    apiCredito.excluirAnalise(a.id).then(props.onMudou).catch((e) => props.onErro(e.message))
-                  }
+                  onClick={() => setAnaliseParaExcluir(a)}
                 >
                   ×
                 </button>
@@ -575,6 +585,19 @@ function AnalisesPainel(props: {
           )}
         </tbody>
       </table>
+      <ConfirmationModal
+        isOpen={!!analiseParaExcluir}
+        onClose={() => setAnaliseParaExcluir(null)}
+        onConfirm={() => {
+          if (analiseParaExcluir) {
+            const id = analiseParaExcluir.id;
+            setAnaliseParaExcluir(null);
+            apiCredito.excluirAnalise(id).then(() => { props.onMudou(); props.onExclusao('Análise excluída com sucesso'); }).catch((e) => props.onErro(e.message));
+          }
+        }}
+        title="Excluir análise"
+        message={`Tem certeza que deseja excluir a análise #${analiseParaExcluir?.id}? Esta ação não pode ser desfeita.`}
+      />
     </section>
   );
 }
@@ -585,6 +608,7 @@ function AnaliseEditor(props: {
   onAtualizada: (a: AnaliseDetalhe) => void;
   onFechar: () => void;
   onErro: (m: string) => void;
+  onSucesso: (m: string) => void;
 }) {
   const { analise, politica } = props;
   const somenteLeitura = analise.status === 'CONCLUIDA';
@@ -611,7 +635,7 @@ function AnaliseEditor(props: {
     apiCredito
       .salvarRespostas(analise.id, observacoes, payload)
       .then((a) => (depois === 'concluir' ? apiCredito.concluirAnalise(a.id) : Promise.resolve(a)))
-      .then(props.onAtualizada)
+      .then((a) => { props.onAtualizada(a); props.onSucesso(depois === 'concluir' ? 'Análise concluída com sucesso' : 'Rascunho salvo com sucesso'); })
       .catch((e) => props.onErro(e.message));
   };
 

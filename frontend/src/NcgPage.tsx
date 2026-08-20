@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CampoExtra, Cliente, Demonstrativo, apiCredito, brl, extrairBalancoPdf, num } from './api';
-import { Campo, InputMoeda } from './ui';
+import { Campo, ConfirmationModal, InputMoeda, useMsgTemp } from './ui';
 import { useAnalise, useAutosave } from './contexto';
 
 const CAMPOS_MONETARIOS: (keyof Demonstrativo)[] = [
@@ -111,8 +111,8 @@ export default function NcgPage() {
   const [colunas, setColunas] = useState<Demonstrativo[]>([]);
   const [extrasMap, setExtrasMap] = useState<CampoExtra[][]>([[], []]);
   const [sujo, setSujo] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [aviso, setAviso] = useMsgTemp();
 
   useEffect(() => {
     apiCredito
@@ -196,13 +196,13 @@ export default function NcgPage() {
 
   return (
     <>
-      {erro && <div className="erro">{erro}</div>}
-      {aviso && <div className="aviso">{aviso}</div>}
+      {erro && <div className="erro">{erro}<button className="fechar-msg" onClick={() => setErro(null)}>×</button></div>}
+      {aviso && <div className={aviso.includes('excluído') || aviso.includes('Removido') ? 'aviso-exclusao' : 'aviso'}>{aviso}<button className="fechar-msg" onClick={() => setAviso(null)}>×</button></div>}
 
       <section className="painel">
         <div className="linha-form">
           <Campo label="Cliente analisado">
-            <select value={clienteId ?? ''} onChange={(e) => setClienteId(Number(e.target.value))}>
+            <select className="campo-largo" value={clienteId ?? ''} onChange={(e) => setClienteId(Number(e.target.value))}>
               {clientes.length === 0 && <option value="">— nenhum cliente —</option>}
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -214,7 +214,7 @@ export default function NcgPage() {
           <Campo label="Ano de referência">
             <input
               type="number"
-              className="campo-ano"
+              className="campo-curto"
               value={ano}
               onChange={(e) => setAno(Number(e.target.value) || ano)}
             />
@@ -239,6 +239,7 @@ export default function NcgPage() {
               onAtualizar={atualizarCampo}
               onSalvar={salvar}
               onImportar={importar}
+              onExclusao={setAviso}
             />
           ))}
         </div>
@@ -334,10 +335,13 @@ function CartaoExercicio(props: {
   onAtualizar: (indice: number, chave: keyof Demonstrativo, valor: number) => void;
   onSalvar: (indice: number) => void;
   onImportar: (indice: number, arquivo: File) => void;
+  onExclusao: (msg: string) => void;
 }) {
   const { demonstrativo: d, indice, extras } = props;
   const inputArquivo = useRef<HTMLInputElement>(null);
   const [novoExtra, setNovoExtra] = useState<{ grupo: string; nome: string } | null>(null);
+  const [extraParaExcluir, setExtraParaExcluir] = useState<CampoExtra | null>(null);
+  const setExclusaoMsg = props.onExclusao;
 
   const somaExtras = (grupo: string) =>
     extras.filter((e) => e.grupo === grupo).reduce((t, e) => t + (e.valor || 0), 0);
@@ -366,6 +370,7 @@ function CartaoExercicio(props: {
   const excluirExtra = (id: number) => {
     apiCredito.excluirCampoExtra(id).then(() => {
       props.onExtrasChange(extras.filter((e) => e.id !== id));
+      setExclusaoMsg('Campo extra removido com sucesso');
     });
   };
 
@@ -396,7 +401,7 @@ function CartaoExercicio(props: {
               <InputMoeda valor={e.valor || 0} onChange={(v) => atualizarExtra(e.id, v)} />
             </td>
             <td>
-              <button className="botao-excluir" title="Remover campo" onClick={() => excluirExtra(e.id)}>×</button>
+              <button className="botao-excluir" title="Remover campo" onClick={() => setExtraParaExcluir(e)}>×</button>
             </td>
           </tr>
         ))}
@@ -475,6 +480,19 @@ function CartaoExercicio(props: {
           Balanço não fecha: Ativo {brl(totalAtivo)} × Passivo + PL {brl(totalPassivo)}
         </p>
       )}
+      <ConfirmationModal
+        isOpen={!!extraParaExcluir}
+        onClose={() => setExtraParaExcluir(null)}
+        onConfirm={() => {
+          if (extraParaExcluir) {
+            const id = extraParaExcluir.id;
+            setExtraParaExcluir(null);
+            excluirExtra(id);
+          }
+        }}
+        title="Remover campo extra"
+        message={`Tem certeza que deseja remover o campo "${extraParaExcluir?.nome}"? Esta ação não pode ser desfeita.`}
+      />
     </section>
   );
 }

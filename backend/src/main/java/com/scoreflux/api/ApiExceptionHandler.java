@@ -28,7 +28,7 @@ public class ApiExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> validation(MethodArgumentNotValidException e) {
         String detalhe = e.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + ": " + f.getDefaultMessage())
+                .map(f -> f.getDefaultMessage())
                 .findFirst()
                 .orElse("Dados inválidos");
         return Map.of("erro", detalhe);

@@ -91,7 +91,7 @@ public class CarteiraService {
         BigDecimal disponivel = limite == null ? null : limite.subtract(saldoAberto);
         String status = limite == null ? "SEM_LIMITE" : (disponivel.signum() >= 0 ? "OK" : "BLOQUEAR");
 
-        return new PosicaoDTO(cliente.getId(), cliente.getNome(), limite, rating, saldoAberto, disponivel, status);
+        return new PosicaoDTO(cliente.getId(), cliente.getNome(), limite, rating, saldoAberto, disponivel, status, cliente.getPrazoCredito());
     }
 
     private record Simulado(String rating, BigDecimal limite) {}

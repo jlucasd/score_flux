@@ -30,9 +30,9 @@ public class UsuarioController {
         this.encoder = encoder;
     }
 
-    public record UsuarioRequest(@NotBlank String nome,
-                                 @NotBlank @Email String email,
-                                 @NotBlank @Size(min = 6, message = "senha deve ter ao menos 6 caracteres") String senha,
+    public record UsuarioRequest(@NotBlank(message = "Nome é obrigatório") String nome,
+                                 @NotBlank(message = "E-mail é obrigatório") @Email(message = "E-mail com formato inválido") String email,
+                                 @NotBlank(message = "Senha é obrigatória") @Size(min = 6, message = "Senha deve ter ao menos 6 caracteres") String senha,
                                  String perfil) {
     }
 

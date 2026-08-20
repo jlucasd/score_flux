@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Cliente, RelatoCampo, RelatoCampoDados, apiCredito } from './api';
-import { Campo } from './ui';
+import { Campo, ConfirmationModal, useMsgTemp } from './ui';
 import { useAnalise } from './contexto';
 
 const DOCUMENTACAO = [
@@ -46,8 +46,9 @@ export default function RelatoCampoPage() {
   const [relatos, setRelatos] = useState<RelatoCampo[]>([]);
   const [relatoAtual, setRelatoAtual] = useState<RelatoCampo | null>(null);
   const [editando, setEditando] = useState(false);
-  const [erro, setErro] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
+  const [aviso, setAviso] = useMsgTemp();
+  const [relatoParaExcluir, setRelatoParaExcluir] = useState<RelatoCampo | null>(null);
 
   useEffect(() => {
     apiCredito
@@ -125,13 +126,14 @@ export default function RelatoCampoPage() {
 
   return (
     <>
-      {erro && <div className="erro">{erro}</div>}
-      {aviso && <div className="aviso">{aviso}</div>}
+      {erro && <div className="erro">{erro}<button className="fechar-msg" onClick={() => setErro(null)}>×</button></div>}
+      {aviso && !aviso.includes('excluído') && <div className="aviso">{aviso}<button className="fechar-msg" onClick={() => setAviso(null)}>×</button></div>}
+      {aviso && aviso.includes('excluído') && <div className="aviso-exclusao">{aviso}<button className="fechar-msg" onClick={() => setAviso(null)}>×</button></div>}
 
       <section className="painel">
         <div className="linha-form">
           <Campo label="Cliente analisado">
-            <select value={clienteId ?? ''} onChange={(e) => setClienteId(Number(e.target.value))}>
+            <select className="campo-largo" value={clienteId ?? ''} onChange={(e) => setClienteId(Number(e.target.value))}>
               {clientes.length === 0 && <option value="">— nenhum cliente —</option>}
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -179,7 +181,7 @@ export default function RelatoCampoPage() {
                   </td>
                   <td>
                     <button className="botao-excluir" title="Excluir relato"
-                      onClick={() => excluir(r.id!)}>×</button>
+                      onClick={() => setRelatoParaExcluir(r)}>×</button>
                   </td>
                 </tr>
               ))}
@@ -206,6 +208,7 @@ export default function RelatoCampoPage() {
           <div className="linha-form" style={{ marginTop: '1rem' }}>
             <Campo label="Título do relato">
               <input
+                className="campo-largo"
                 placeholder="Ex: Visita jan/2025"
                 value={relatoAtual.titulo ?? ''}
                 onChange={(e) => mudar('titulo', e.target.value || null)}
@@ -246,19 +249,21 @@ export default function RelatoCampoPage() {
           <div className="subcriterio">
             <div className="subcriterio-titulo">4.2 Cliente Possui ERP / Sistema de Cobrança</div>
             <p className="dica">O cliente possui sistema de controle integrado (ERP)? Possui sistema de cobrança?</p>
-            <div className="par-radios">
-              <div className="campo">
-                <span>ERP</span>
-                <RadiosSimNao nome="possui-erp" valor={relatoAtual.possuiErp} onChange={(v) => mudar('possuiErp', v)} />
-              </div>
-              <div className="campo">
-                <span>Cobrança</span>
-                <RadiosSimNao
-                  nome="possui-cobranca"
-                  valor={relatoAtual.possuiCobranca}
-                  onChange={(v) => mudar('possuiCobranca', v)}
-                />
-              </div>
+            <div className="opcoes">
+              <span className="rotulo-inline">ERP</span>
+              {([['Sim', true], ['Não', false]] as const).map(([rotulo, v]) => (
+                <label key={`erp-${rotulo}`} className={relatoAtual.possuiErp === v ? 'opcao marcada' : 'opcao'}>
+                  <input type="radio" name="possui-erp" checked={relatoAtual.possuiErp === v} onChange={() => mudar('possuiErp', v)} />
+                  {rotulo}
+                </label>
+              ))}
+              <span className="rotulo-inline" style={{ marginLeft: '1.5rem' }}>Cobrança</span>
+              {([['Sim', true], ['Não', false]] as const).map(([rotulo, v]) => (
+                <label key={`cob-${rotulo}`} className={relatoAtual.possuiCobranca === v ? 'opcao marcada' : 'opcao'}>
+                  <input type="radio" name="possui-cobranca" checked={relatoAtual.possuiCobranca === v} onChange={() => mudar('possuiCobranca', v)} />
+                  {rotulo}
+                </label>
+              ))}
             </div>
           </div>
 
@@ -314,6 +319,21 @@ export default function RelatoCampoPage() {
           ))}
         </ol>
       </section>
+      <ConfirmationModal
+        isOpen={!!relatoParaExcluir}
+        onClose={() => setRelatoParaExcluir(null)}
+        onConfirm={() => {
+          if (relatoParaExcluir?.id) {
+            const id = relatoParaExcluir.id;
+            setRelatoParaExcluir(null);
+            excluir(id);
+          }
+        }}
+        title="Excluir relato de campo"
+        message={`Tem certeza que deseja excluir o relato "${relatoParaExcluir?.titulo || 'Sem título'}"? Esta ação não pode ser desfeita.`}
+        confirmText="Sim, excluir"
+        cancelText="Cancelar"
+      />
     </>
   );
 }
@@ -355,27 +375,3 @@ function Pergunta(props: {
   );
 }
 
-function RadiosSimNao(props: {
-  nome: string;
-  valor: boolean | null;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="opcoes">
-      {[
-        ['Sim', true] as const,
-        ['Não', false] as const,
-      ].map(([rotulo, v]) => (
-        <label key={rotulo} className={props.valor === v ? 'opcao marcada' : 'opcao'}>
-          <input
-            type="radio"
-            name={props.nome}
-            checked={props.valor === v}
-            onChange={() => props.onChange(v)}
-          />
-          {rotulo}
-        </label>
-      ))}
-    </div>
-  );
-}

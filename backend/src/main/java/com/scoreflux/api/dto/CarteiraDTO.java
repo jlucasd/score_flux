@@ -19,7 +19,8 @@ public record CarteiraDTO(
             String rating,
             BigDecimal saldoAberto,
             BigDecimal disponivel,      // limite − saldoAberto; null se sem limite
-            String status               // OK, BLOQUEAR ou SEM_LIMITE
+            String status,              // OK, BLOQUEAR ou SEM_LIMITE
+            LocalDate prazoCredito      // prazo para o saldo do cliente
     ) {
     }
 

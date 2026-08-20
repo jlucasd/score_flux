@@ -22,9 +22,9 @@ public class ClienteController {
         this.service = service;
     }
 
-    public record ClienteRequest(@NotBlank String nome, String cpfCnpj, Cliente.Tipo tipo,
+    public record ClienteRequest(@NotBlank(message = "Nome é obrigatório") String nome, String cpfCnpj, Cliente.Tipo tipo,
                                  String municipio, String uf, String telefone,
-                                 @jakarta.validation.constraints.Email String email, String endereco,
+                                 @jakarta.validation.constraints.Email(message = "E-mail com formato inválido") String email, String endereco,
                                  String cep, String bairro, String numero) {
 
         Cliente paraEntidade() {

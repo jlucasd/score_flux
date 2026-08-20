@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Politica, apiCredito } from './api';
+import { useMsgTemp } from './ui';
 
 const fmtPeso = (v: number) =>
   (v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
@@ -38,7 +39,7 @@ function CelulaPeso(props: { subcriterioId: number; peso: number; onAtualizar: (
     );
   }
   return (
-    <td style={{ cursor: 'pointer', textAlign: 'right' }} onClick={iniciar} title="Clique para editar">
+    <td style={{ cursor: 'pointer', textAlign: 'right', fontWeight: 700 }} onClick={iniciar} title="Clique para editar">
       {fmtPeso(props.peso)}
     </td>
   );
@@ -46,7 +47,7 @@ function CelulaPeso(props: { subcriterioId: number; peso: number; onAtualizar: (
 
 export default function ParametrosPage() {
   const [politica, setPolitica] = useState<Politica | null>(null);
-  const [erro, setErro] = useState<string | null>(null);
+  const [erro, setErro] = useMsgTemp();
 
   useEffect(() => {
     apiCredito.politica().then(setPolitica).catch((e) => setErro(e.message));
@@ -95,13 +96,13 @@ export default function ParametrosPage() {
                       <tr className="linha-grupo">
                         <td>{numero}</td>
                         <td>{grupo.toUpperCase()}</td>
-                        <td style={{ textAlign: 'right' }}>{fmtPeso(somaGrupo)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{fmtPeso(somaGrupo)}</td>
                         <td colSpan={3}></td>
                       </tr>
                       {subs.map((s) => (
                         <tr key={s.id}>
                           <td>{s.codigo}</td>
-                          <td className="col-item">{s.nome}</td>
+                          <td className="col-item" style={{ fontWeight: 700 }}>{s.nome}</td>
                           <CelulaPeso subcriterioId={s.id} peso={s.peso} onAtualizar={setPolitica} />
                           <td className="col-texto">{s.instrumento ?? '—'}</td>
                           <td className="col-texto">{s.fonte ?? '—'}</td>
